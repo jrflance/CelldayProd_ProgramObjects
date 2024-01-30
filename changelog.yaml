@@ -1,0 +1,8 @@
+databaseChangeLog:
+    - includeAll:
+        errorIfMissingOrEmpty: false
+        path: /procedures
+
+    - includeAll:
+        errorIfMissingOrEmpty: false
+        path: /functions

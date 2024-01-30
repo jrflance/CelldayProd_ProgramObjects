@@ -1,0 +1,19 @@
+trigger: none
+
+pool:
+  vmImage: ubuntu-22.04
+
+steps:
+  - checkout: self
+    clean: true
+    persistCredentials: true
+  - script: |
+      pip install sqlfluff
+    displayName: 'Install SqlFluff'
+  - script: |
+      git fetch origin $(System.PullRequest.TargetBranch)
+      CHANGED_FILES=$(git diff --name-only FETCH_HEAD $(Build.SourceVersion) | grep '\.sql$')
+      echo "Linting the following SQL files:"
+      echo $CHANGED_FILES
+      echo $CHANGED_FILES | xargs sqlfluff lint
+    displayName: 'Lint SQL Files'

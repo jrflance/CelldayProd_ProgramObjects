@@ -1,0 +1,58 @@
+[sqlfluff]
+dialect = tsql
+rules = L011,L012,L013,L020,L066,AL08,L021,L037,L054,L010,L040,L063,L047,L055,L067,LT01,LT02,L016,L017,L018,L065,L050,L026,L027,L028,L029,L057,L043,L045,L058,L034,L056,L009
+
+warnings = L062,L014,L016
+
+exclude_rules = CP02
+
+#default 80
+max_line_length = 120 
+
+[sqlfluff:rules:aliasing.table]
+aliasing = explicit
+
+[sqlfluff:rules:aliasing.column]
+aliasing = explicit
+
+
+[sqlfluff:rules:aliasing.length] 
+max_alias_lenght = 6
+
+[sqlfluff:rules:ambiguous.column_references]
+group_by_and_order_by_style = consistent
+
+[sqlfluff:rules:capitalisation.keywords]
+capitalisation_policy = upper
+
+[sqlfluff:rules:capitalisation.types]
+extended_capitalisation_policy = upper
+
+[sqlfluff:rules:convention.count_rows]
+refer_count_1 = True
+
+[sqlfluff:rules:convention.blocked_words]
+blocked_words = DELETE
+
+[sqlfluff:rules:convention.casting_style]
+preferred_type_casting_style = consistent
+
+
+[sqlfluff:rules:layout.long_lines]
+ignore_comment_clauses = False
+ignore_comment_lines = False
+
+[sqlfluff:rules:references.consistent]
+single_table_references = consistent
+
+[sqlfluff:rules:references.keywords]
+quoted_identifiers_policy = none
+
+[sqlfluff:rules:references.special_chars]
+quoted_identifiers_policy = none
+
+
+[sqlfluff:indentation]
+indent_unit = space
+tab_space_size = 4
+ 

@@ -1,0 +1,54 @@
+trigger:
+  tags:
+    include:
+      - v*
+
+pool:
+  vmImage: ubuntu-22.04
+
+variables:
+  - group: octopus
+
+steps:
+  - checkout: self
+    clean: true
+    persistCredentials: true
+  - pwsh: .\pipelines\scrape-tag.ps1
+    name: scrapetag
+    displayName: 'Scrape Tag'
+  - pwsh: |
+      Write-Host "##[section]Installing Octopus.DotNet.Cli" -ForegroundColor Green
+      dotnet tool install --global Octopus.DotNet.Cli;
+      Install-Module -Name powershell-yaml -Force;
+    displayName: 'Install Misc Dependencies'
+  - pwsh: |
+      Import-Module powershell-yaml
+      $projectName = (Get-Content ./pipelines/package.yaml -Raw | ConvertFrom-Yaml).ProjectName
+      $packageName = $projectName -replace " ", "";
+      $releaseVersion = "$(scrapetag.ReleaseVersion)";
+      $releaseNotes = "$(scrapetag.ReleaseNotes)";
+      $releaseChannel = "$(scrapetag.IsDevTag)" -eq 'False' ? 'Production' : 'Dev'
+
+      dotnet octo pack --basePath ./ --id $packageName --version ${releaseVersion} --outFolder ./ --format Zip
+      dotnet octo push --package ./${packageName}.${releaseVersion}.zip --space "Data Projects"
+      dotnet octo create-release --project "${projectName}" --version ${releaseVersion} --releaseNotes "${releaseNotes}" --channel ${releaseChannel} --package "${packageName}:${releaseVersion}" --space "Data Projects"
+    displayName: 'Package and Create Release'
+    env:
+      OCTOPUS_CLI_API_KEY: $(OCTOPUS_CLI_API_KEY)
+      OCTOPUS_CLI_SERVER: 'https://t-cetra-deploy.octopus.app/'
+  - pwsh: |
+      $projectName = (Get-Content ./pipelines/package.yaml -Raw | ConvertFrom-Yaml).ProjectName;
+      $releaseVersion = "$(scrapetag.ReleaseVersion)";
+      $envs = "$(scrapetag.Envs)".Split(',');
+
+      foreach ($env in $envs) {
+          if ($env -eq "Production" -or $env -eq "") {
+            throw "Cannnot deploy to via pipeline: $env";
+          }
+          dotnet-octo deploy-release --waitForDeployment --deploymentTimeout "02:00:00" --project "$projectName" --deployTo "$($env.Trim())" --version $releaseVersion --space "Data Projects";
+      }
+    displayName: 'Deploy'
+    condition: and(succeeded(), eq(variables['scrapetag.IsDevTag'], 'True'))
+    env:
+      OCTOPUS_CLI_API_KEY: $(OCTOPUS_CLI_API_KEY)
+      OCTOPUS_CLI_SERVER: 'https://t-cetra-deploy.octopus.app/'
