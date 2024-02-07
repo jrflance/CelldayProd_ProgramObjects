@@ -308,7 +308,7 @@ BEGIN
                     @subject = @str_subject,
                     @body = @str_body,
                     @body_format = 'HTML';
-            END;
+            END
     END TRY
     BEGIN CATCH
         RETURN -1

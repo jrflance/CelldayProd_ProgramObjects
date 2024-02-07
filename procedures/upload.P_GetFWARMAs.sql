@@ -168,9 +168,9 @@ BEGIN
             f.FileStatus = -1,
             f.ErrorInfo = @ERRMSG
         FROM upload.tblFile AS f
-        WHERE FileID = @FileID;
+        WHERE FileID = @FileID
 
-        SELECT 0 AS RecordCount;
-        THROW;
-    END CATCH;
+        SELECT 0 AS RecordCount
+        ; THROW;
+    END CATCH
 END;
