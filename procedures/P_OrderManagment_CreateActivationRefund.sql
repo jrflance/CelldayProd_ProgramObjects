@@ -18,7 +18,7 @@
 --          @ActivationOrder = 146876726, @ReturnReason='3'
 --			   :
 ---- =============================================
-ALTER PROC [OrderManagment].[P_OrderManagment_CreateActivationRefund]
+CREATE OR ALTER PROC [OrderManagment].[P_OrderManagment_CreateActivationRefund]
     (
         @ActivationOrder INT,
         @ReturnReason NTEXT

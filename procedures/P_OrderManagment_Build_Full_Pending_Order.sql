@@ -7,7 +7,7 @@
 --        Date : 1/15/2024
 -- Description : build order header and order item for pending order
 -- =============================================
-CREATE PROC [OrderManagment].[P_OrderManagment_Build_Full_Pending_Order]
+CREATE OR ALTER PROC [OrderManagment].[P_OrderManagment_Build_Full_Pending_Order]
     (
         @AccountID INT,
         @Datefrom DATETIME,
