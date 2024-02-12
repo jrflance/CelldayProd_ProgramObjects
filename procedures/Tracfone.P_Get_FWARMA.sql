@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset KarinaMasihHudson:e2f36125-f546-4d28-86e2-e030009cd23b stripComments:false runOnChange:true
+--changeset KarinaMasihHudson:b0937c7fc9e8413eb5f0fc2aabc31c7d stripComments:false runOnChange:true
 
 /*=============================================
               :
@@ -27,7 +27,6 @@ BEGIN
         SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
         IF @StartDate IS NULL
             SET @StartDate = CAST(DATEADD(DAY, -1, GETDATE()) AS DATE);
-        --SET @StartDate = CONVERT(DATE, DATEADD( DAY, -10, GETDATE()));   --CHANGE THIS
 
         IF @EndDate IS NULL
             SET @EndDate = CAST(GETDATE() AS DATE);
@@ -40,10 +39,10 @@ BEGIN
             orma.ID,
             odrma.Order_No AS [Return_Order_No]
             , odrma.Account_ID
-            , odrma.OrderTotal AS [Return_OrderTotal]
             , odrma.DateOrdered AS [Return_DateOrdered]
             , orma.SKU
             , orma.Name
+            , orma.Price + ISNULL(orma.Fee, 0) AS [Return_OrderTotal]
             , CAST(odrma.AuthNumber AS INT) AS [AuthNumberINT]
         INTO #FWARMA
         FROM dbo.Orders AS orma
@@ -72,18 +71,18 @@ BEGIN
             , o.ID AS [Act_Order_ID]
             , od.Order_No AS [Act_Order_No]
             , od.DateOrdered AS [Act_DateOrdered]
-            , od.OrderTotal AS [Act_OrderTotal]
             , o.Product_ID AS [Act_Product_ID]
             , o.Name AS [Act_Name]
             , odrma.Return_Order_No
             , odrma.Return_DateOrdered
             , odrma.Return_OrderTotal
+            , o.Price + ISNULL(o.Fee, 0) AS [Act_OrderTotal]
         INTO #Activations
         FROM #FWARMA AS odrma
         JOIN cellday_prod.dbo.Order_No AS od
             ON
                 od.Order_No = odrma.AuthNumberINT
-                AND odrma.Return_OrderTotal = (od.OrderTotal * -1)
+                AND odrma.Return_OrderTotal = ((o.Price + ISNULL(o.Fee, 0)) * -1)
         JOIN cellday_prod.dbo.orders AS o
             ON od.Order_No = o.Order_No
         WHERE
@@ -114,10 +113,7 @@ BEGIN
         FROM #Activations AS B
         JOIN dbo.tblOrderItemAddons AS A
             ON B.Act_Order_ID = A.OrderID
-        JOIN dbo.tblAddonFamily AS f2
-            ON
-                f2.AddonID = A.AddonsID
-                AND f2.AddonTypeName IN ('PhoneNumberType');
+        WHERE a.AddonsID = 23;
 
 
         DROP TABLE IF EXISTS #Transaction
@@ -248,7 +244,8 @@ BEGIN
                     @TestWarning VARCHAR(30)
                     = (CASE WHEN @Server IN ('DB01', 'DB03') THEN '' ELSE 'TEST TEST TEST; ' END)
                     , @Recipient VARCHAR(100)
-                    = (CASE WHEN @Server IN ('DB01', 'DB03') THEN 'khudson@tcetra.com' ELSE 'khudson@tcetra.com' END)
+                    = (CASE WHEN @Server IN ('DB01', 'DB03') THEN 'mmoore@tcetra.com,jhilditch@tcetra.com,
+                    mjallaq@tcetra.com' ELSE 'khudson@tcetra.com' END)
                 DECLARE
                     @str_profile_name VARCHAR(100) = 'SQLAlerts'
                     , @str_from_address VARCHAR(100) = 'SqlAlerts@tcetra.com'
