@@ -153,7 +153,7 @@ BEGIN
             (
                 SELECT COUNT(*) FROM CellDayTemp.Upload.tblOutPutFile
             );
-        SET @CNT = IIF(@CNT = 0, 2, @CNT);
+        SET @CNT = IIF(@CNT < 2, 2, @CNT);
         SELECT @CNT AS RecordCount;
     END TRY
     BEGIN CATCH

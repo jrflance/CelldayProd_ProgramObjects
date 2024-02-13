@@ -80,13 +80,12 @@ BEGIN
         INTO #Activations
         FROM #FWARMA AS odrma
         JOIN cellday_prod.dbo.Order_No AS od
-            ON
-                od.Order_No = odrma.AuthNumberINT
-                AND odrma.Return_OrderTotal = ((o.Price + ISNULL(o.Fee, 0)) * -1)
+            ON od.Order_No = odrma.AuthNumberINT
         JOIN cellday_prod.dbo.orders AS o
             ON od.Order_No = o.Order_No
         WHERE
             od.OrderType_ID IN (22, 23)
+            AND odrma.Return_OrderTotal = ((o.Price + ISNULL(o.Fee, 0)) * -1)
             AND ISNULL(o.ParentItemID, 0) IN (0, 1);
 
         DROP TABLE IF EXISTS #IMEI
