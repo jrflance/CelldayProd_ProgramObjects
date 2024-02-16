@@ -44,6 +44,7 @@
  DJJ20230802 : Modify @MPID to take two characters.  Could not test so did not make INT
  NG20231027  : Rework of OrderTracking to bring in Order Tracking details instead of Reference Numbers
  NG20240118  : Added Shipping Address (BusinessAddress) and also added Assigned Current Account Address
+ NG20240216  : Fixed spacing issue that was causing report to fail
  --Test: 218728194
 ---------------------------------------------------------------------------------------------------------
  MP IDs (SELECT BrandedMPID,BrandedMPName FROM MarketPlace.tblBrandedMP):
@@ -58,12 +59,12 @@
 -- noqa: enable=all
 CREATE OR ALTER PROC [Report].[P_BrandedHandset_Sales_Detail]
     (
-        @Session_ID INT,            -- Login Account
+        @Session_ID INT,           -- Login Account
         @ACCOUNT_ID NVARCHAR(100),  -- Merchants ID
         @OrderNo NVARCHAR(100),
         @StartDate DATETIME,
         @EndDate DATETIME,
-        @MPID NCHAR(2)      -- DJJ20230802 changed from NCHAR(1)
+        @MPID NCHAR(2)       -- DJJ20230802 changed from NCHAR(1)
     )
 AS
 BEGIN
@@ -311,7 +312,18 @@ BEGIN
         SELECT
             od.Order_No
             , od.Account_ID
-            , od.[User_ID]                                --BS20230303
+            , od.[User_ID]
+            , o.ID
+            , od.DateOrdered
+            , od.DateFilled AS DateFilled
+            , o.Product_ID
+            , o.Name
+            , o.SKU
+            , c.Address1 AS BusinessAddress1 --NG20240118
+            , c.Address2 AS BusinessAddress2 --NG20240118
+            , c.City AS BusinessCity --NG20240118
+            , c.State AS BusinessState --NG20240118
+            , c.Zip AS BusinessZipCode --NG20240118
             , (
                 CASE
                     WHEN od.Void = 1
@@ -329,19 +341,8 @@ BEGIN
                         'Unknown'
                 END
             ) AS OrderStatus
-            , o.ID
-            , od.DateOrdered
-            , od.DateFilled AS DateFilled
-            , o.Product_ID
-            , o.Name
-            , o.SKU
             , (o.Price - o.DiscAmount) AS DealerCost
             , COALESCE(o2.Name, 'Account Balance') AS [Payment Method]
-            , c.Address1 AS BusinessAddress1 --NG20240118
-            , c.Address2 AS BusinessAddress2 --NG20240118
-            , c.City AS BusinessCity --NG20240118
-            , c.State AS BusinessState --NG20240118
-            , c.Zip AS BusinessZipCode --NG20240118
         FROM dbo.Order_No AS od
         JOIN dbo.Orders AS o
             ON o.Order_No = od.Order_No
