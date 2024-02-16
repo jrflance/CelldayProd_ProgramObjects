@@ -1,7 +1,7 @@
 --liquibase formatted sql
 
---changeset Nicolas Griesdorn e86a9636-780d-461c-bcc7-1c44f79b6021 stripComments:false runOnChange:true endDelimiter:/
-
+--changeset melissarios:213109 stripComments:false runOnChange:true endDelimiter:/
+-- noqa: disable=all
 /*=============================================
 --      Author : Jacob Lowe -- noqa: LT01
 --             :  -- noqa: LT01
@@ -37,6 +37,7 @@
 --  MR20231128 : Added an exception that session ID 2 can view zeros for children. (AND @sessionID <> 2)
 --  MR20231129 : Took out the "DISTINCT" in the #ListOfCommInfo sections and add the SUM of commission_Amt
 			   : Removed Commission_Amt DECIMAL(9,2), OrderType_ID INT from #ListOfOrders1
+--  MR20240215 :  Removed join to product carrier mapping table in both options' final select statements. Add Fee column and Retail Cost column.
 -----testing
 			--  DECLARE  -- noqa: LT01
 			--  @sessionID INT = 64363
@@ -46,7 +47,8 @@
 Broke the logic fully into @Option 0 and @Option 1 so that all of the logic AND oc.Commission_Amt <> 0.00;
 --Usage : EXEC [Report].[P_Report_MA_Invoice_Commission_Details_With_Tree_Commissions] 2, 42779039
 -- =============================================*/
-CREATE OR ALTER PROCEDURE [Report].[P_Report_MA_Invoice_Commission_Details_With_Tree_Commissions]
+-- noqa: enable=all
+ALTER   PROCEDURE [Report].[P_Report_MA_Invoice_Commission_Details_With_Tree_Commissions]
     (
         @sessionID INT
         , @Option INT
@@ -353,6 +355,7 @@ BEGIN
                     , o.Product_ID
                     , o.Price
                     , o.DiscAmount
+					, ISNULL(o.Fee, 0.00) AS Fee --MR20240215
                     , o.Product_ID AS [Product SKU]
                     , CASE
                         WHEN pt.ProductTypeName = 'PinRtr' THEN 'Airtime'
@@ -394,8 +397,6 @@ BEGIN
                     ON o.ID = lo.Orders_ID
                 JOIN dbo.products AS p
                     ON p.Product_ID = o.Product_ID
-                JOIN Products.tblProductCarrierMapping AS CarrMap
-                    ON o.Product_ID = CarrMap.ProductId
                 LEFT JOIN products.tblProductType AS pt
                     ON pt.ProductTypeID = p.Product_Type
                 LEFT JOIN MarketPlace.tblProductAttributes AS pa
@@ -434,6 +435,7 @@ BEGIN
                         , pc1.ProductTypeName
                         , pc1.Price
                         , pc1.DiscAmount
+						, pc1.Fee
                         , n.Account_ID
                         , n.DateOrdered
                         , n.DateFilled	--KMH20230831
@@ -496,6 +498,8 @@ BEGIN
                     , m.ProductTypeName
                     , m.Price
                     , m.DiscAmount
+					, m.Fee
+					, (m.Price - m.DiscAmount + m.Fee) AS RetailCost --MR20240215
                     , m.Account_ID
                     , m.DateOrdered
                     , m.DateFilled
@@ -636,6 +640,7 @@ BEGIN
                     , o.Product_ID
                     , o.Price
                     , o.DiscAmount
+					, ISNULL(o.Fee, 0.00) AS Fee
                     , o.Product_ID AS [Product SKU]
                     , CASE
                         WHEN pt.ProductTypeName = 'PinRtr' THEN 'Airtime'
@@ -677,8 +682,6 @@ BEGIN
                     ON o.ID = lo.Orders_ID
                 JOIN dbo.products AS p
                     ON p.Product_ID = o.Product_ID
-                JOIN Products.tblProductCarrierMapping AS CarrMap
-                    ON o.Product_ID = CarrMap.ProductId
                 LEFT JOIN products.tblProductType AS pt
                     ON pt.ProductTypeID = p.Product_Type
                 LEFT JOIN MarketPlace.tblProductAttributes AS pa
@@ -695,6 +698,7 @@ BEGIN
                         , pc1.ProductTypeName
                         , pc1.Price
                         , pc1.DiscAmount
+						, pc1.Fee
                         , n.Account_ID
                         , n.DateOrdered
                         , n.DateFilled	--KMH20230831
@@ -726,6 +730,8 @@ BEGIN
                     , m.ProductTypeName
                     , m.Price
                     , m.DiscAmount
+					, m.Fee --MR20240215
+					, (m.Price - m.DiscAmount + m.Fee) AS RetailCost --MR20240215
                     , m.Account_ID
                     , m.DateOrdered
                     , m.DateFilled
