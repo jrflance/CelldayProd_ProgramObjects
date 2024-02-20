@@ -86,8 +86,8 @@ BEGIN
 
         SELECT
             t.AccountID,
-            t.ProgramID,
-            t.TierID
+            ProgramID, -- noqa: RF02
+            TierID -- noqa: RF02
         INTO #TBVaccountTiers
         FROM #TBVaccounts AS t, #TBVtiers
 
@@ -132,9 +132,9 @@ BEGIN
 
         SELECT
             t.AccountID,
-            t.OrderTypeID,
-            t.CreditTermID,
-            t.ACHGroupId
+            OrderTypeID, -- noqa: RF02
+            CreditTermID, -- noqa: RF02
+            ACHGroupId -- noqa: RF02
         INTO #TBVAccountsCreditTerms
         FROM #TBVAccountsCredit AS t, #TBVCreditTerms
 
