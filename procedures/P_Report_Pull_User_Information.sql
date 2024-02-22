@@ -1,6 +1,8 @@
 --liquibase formatted sql
 
 --changeset jrose:10C2A60D-5284-411A-9EB7-BF04E65BB8DC stripComments:false runOnChange:true endDelimiter:/
+
+-- noqa: disable=all
 -- =============================================
 --             : 
 --      Author : Jacob Lowe
@@ -16,7 +18,8 @@
 --  JR20240123 : Formatting. Corrected account status usage (at report Management level too).
 --             : 
 -- =============================================
-ALTER PROCEDURE [Report].[P_Report_Pull_User_Information]
+-- noqa: enable=all
+CREATE OR ALTER PROCEDURE [Report].[P_Report_Pull_User_Information]
     (
         @SessionAccountID INT,
         @AccountStatus INT,
@@ -126,12 +129,12 @@ BEGIN TRY
     LEFT JOIN Tracfone.tblTracfoneDealerStatus AS tds ON tds.TracfoneDealerStatusID = tar.TracfoneStatus
     LEFT JOIN Tracfone.tblTracTier AS tt ON tar.TracfoneTierId = tt.TracTierId
 
-    LEFT JOIN CarrierSetup.tblAccountDealerCode AS adc 
+    LEFT JOIN CarrierSetup.tblAccountDealerCode AS adc
         ON
             adc.AccountID = ac.Account_ID
             AND adc.DealerCode <> 'UMTEMP'
 
-    LEFT JOIN CarrierSetup.tblVzwAccountStore AS vas 
+    LEFT JOIN CarrierSetup.tblVzwAccountStore AS vas
         ON
             vas.AccountId = ac.Account_ID
             AND vas.StatusID <> 255
