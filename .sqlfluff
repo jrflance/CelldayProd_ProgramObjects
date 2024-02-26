@@ -5,7 +5,7 @@ rules = L011,L012,L013,L020,L066,AL08,L021,L037,L054,L010,L040,L063,L047,L055,L0
 warnings = L062,L014,L016
 
 #RF01 has bug on exists #5221
-exclude_rules = CP02,RF01
+exclude_rules = CP02,RF01,ST06
 
 #default 80
 max_line_length = 150 
@@ -32,7 +32,7 @@ capitalisation_policy = upper
 extended_capitalisation_policy = upper
 
 [sqlfluff:rules:convention.count_rows]
-refer_count_1 = True
+prefer_count_1 = True
 
 [sqlfluff:rules:convention.blocked_words]
 blocked_words = DELETE
@@ -58,4 +58,3 @@ quoted_identifiers_policy = none
 [sqlfluff:indentation]
 indent_unit = space
 tab_space_size = 4
- 
