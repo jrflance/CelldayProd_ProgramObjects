@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset jrose:34D98088-CF56-4FBB-90C9-77C96C5D50B3 stripComments:false runOnChange:true endDelimiter:/
+--changeset jrose:CC966D71-F9AE-4B5E-ADCB-562915C12665 stripComments:false runOnChange:true endDelimiter:/
 -- noqa: disable=all
 -- =============================================
 --             : 
@@ -10,7 +10,8 @@
 --             : 
 -- Description : Recreation of the [Report].[P_Report_Event_Registration] SP to show single rows of accounts with their current most counts
 --             : 
--- Usage       : EXEC [Report].[P_Report_Event_RegistrationAndEntryCount] 2, 1, '2019-02-18', '2019-03-09'
+-- Usage       : EXEC [Report].[P_Report_Event_RegistrationAndEntryCount] @SessionID = 2, @EventName = 'SIMPLE Mobile Connect and Win Tax Time Contest',
+--             :                @Carrier = 'All', @MinEntries = 0, @MaxEntries = 100, @StartDate = '2019-02-18', @EndDate = '2019-03-09'
 --             :
 -- NG2021117   : Added ability to enter Min or Max number of Entries based on User input
 -- NG2021130   : Cleaned up Selects and added Joins to final Select for cleaner indexing of query for future use.
@@ -30,7 +31,7 @@
 -- MR20230323  : Added new section to show the 3X plans separate from the other Activations.
 -- MR20230404  : Changed the Name column to pull from the temp table rather than orders table in the #ThreeXplans section.
 --             : commented out some un-unecessary final tables in the last select for optimization.
--- JR20240212  : Formatting.
+-- JR20240212  : Formatting. Added block for event 8 : 'SIMPLE Mobile Connect and Win Tax Time Contest'
 --             : 
 -- =============================================
 -- noqa: enable=all
@@ -50,6 +51,14 @@ BEGIN
 
         SET NOCOUNT ON;
 
+        IF (ISNULL(@SessionID, 0) <> 2)
+            BEGIN
+                SELECT
+                    'This report is highly restricted! Please see your T-Cetra ' +
+                    'representative if you need access.' AS [Error Message];
+                RETURN;
+            END;
+
         DECLARE @CarrierName NVARCHAR(100);
 
         SELECT
@@ -59,18 +68,10 @@ BEGIN
                 WHEN 'Verizon' THEN '%Verizon%'
                 ELSE '%'
             END
+
         DECLARE @EventID INT;
 
         SET @EventID = (SELECT EventId FROM Marketing.tblEvents WHERE Name = @EventName)
-
-        IF (ISNULL(@SessionID, 0) <> 2)
-            BEGIN
-                SELECT
-                -- noqa: disable=all
-                    'This report is highly restricted! Please see your T-Cetra representative if you need access.' AS [Error Message];
-                -- noqa: enable=all
-                RETURN;
-            END;
 
         DECLARE @BeginPeriod DATETIME = @StartDate;
         DECLARE @EndPeriod DATETIME = @EndDate;
@@ -106,6 +107,80 @@ BEGIN
 
         IF @MaxEntries = ''
             SET @MaxEntries = NULL;
+
+        IF @EventID = 8 -- JR20240212 : 'SIMPLE Mobile Connect and Win Tax Time Contest'
+            BEGIN
+
+                SELECT
+                    ev.Name AS [Name],
+
+                    er.AccountId AS [Account ID],
+                    ac.Account_Name AS [Account Name],
+
+                    cu.FirstName AS [First Name],
+                    cu.LastName AS [Last Name],
+
+                    cu.City,
+                    cu.State,
+                    cu.Zip,
+                    cu.Phone,
+                    cu.Email,
+
+                    ac3.Account_ID AS [MA],
+                    ac3.Account_Name AS [MA Name],
+
+                    CAST(CONVERT(DATETIME, er.RegistrationDate, 120) AS VARCHAR(19))
+                        AS [Registration Date],
+
+                    CASE
+                        WHEN cu.Address2 IS NOT NULL AND cu.Address2 <> ''
+                            THEN cu.Address1 + ', ' + cu.Address2
+                        ELSE
+                            cu.Address1
+                    END
+                        AS [Address],
+
+                    ee.EntryType AS [Category_Name],
+
+                    SUM(ee.NumberOfEntries) AS [NumberOfEntries]
+
+                FROM [Marketing].[tblEventRegistration] AS er WITH (NOLOCK)
+
+                JOIN [Marketing].[tblEvents] AS ev WITH (NOLOCK)
+                    ON
+                        er.EventId = ev.EventId
+                        AND ev.EventId = @EventID
+
+                JOIN [dbo].[Account] AS ac WITH (NOLOCK)
+                    ON
+                        er.AccountId = ac.Account_ID
+                        AND ISNULL(ac.IstestAccount, 0) = 0 --there are 5 test accounts in the EventRegistration Table
+
+                JOIN dbo.AccountStatus_ID AS asi WITH (NOLOCK) ON asi.AccountStatus_ID = ac.AccountStatus_ID
+
+                JOIN [dbo].[Customers] AS cu WITH (NOLOCK) ON ac.Contact_ID = cu.Customer_ID
+
+                JOIN [Marketing].[tblEventEntries] AS ee WITH (NOLOCK)
+                    ON
+                        er.AccountId = ee.AccountId
+                        AND ee.EventId = @EventID
+
+                LEFT JOIN dbo.Account AS ac3
+                    ON
+                        ac3.Account_ID = CAST(dbo.fn_GetTopParent_NotTcetra_h(ac.Hierarchy) AS INT)
+
+                GROUP
+                BY
+                    ev.Name, er.AccountId, ee.NumberOfEntries, ac.Account_Name,
+                    cu.FirstName, cu.LastName, cu.City, cu.State, cu.Zip,
+                    cu.Phone, cu.Email, ac3.Account_ID, ac3.Account_Name,
+                    er.RegistrationDate, cu.Address1, cu.Address2,
+                    ee.EntryType, ee.NumberOfEntries
+
+                ORDER BY er.AccountId;
+
+                RETURN;
+            END
 
         DROP TABLE IF EXISTS #registered_accounts;
 
