@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset  BrandonStahl:c1a2549c-5a1e-4a7f-a5c7-666f8987e7cd stripComments:false runOnChange:true splitStatements:false
+--changeset  BrandonStahl:2203b772-a0aa-401a-9182-084627bb1cf9 stripComments:false runOnChange:true splitStatements:false
 
 --=============================================
 --				:
@@ -53,12 +53,12 @@ BEGIN
         IsSerialized BIT
     );
 
-    IF OBJECT_ID('tempdb..#Catalog') IS NOT NULL
+    IF OBJECT_ID('tempdb..#MultiAcctCatalog') IS NOT NULL
         BEGIN
-            DROP TABLE #Catalog;
+            DROP TABLE #MultiAcctCatalog;
         END;
 
-    CREATE TABLE #Catalog
+    CREATE TABLE #MultiAcctCatalog
     (
         ProductId INT NOT NULL,
         Lev INT,
@@ -99,7 +99,7 @@ BEGIN
 
         WHILE @@FETCH_STATUS = 0
             BEGIN
-                INSERT INTO #Catalog
+                INSERT INTO #MultiAcctCatalog
                 EXEC Products.P_GetProductListByCategory_v6
                     @accountID = @AccountId,
                     @categoryID = 0,
@@ -127,7 +127,7 @@ BEGIN
         FROM dbo.Products AS p
         JOIN Products.tblProductType AS pt ON pt.ProductTypeID = ISNULL(p.Product_Type, 0)
         LEFT JOIN Products.tblSubProductType AS spt ON spt.SubProductTypeId = p.SubProductTypeId
-        WHERE EXISTS (SELECT 1 FROM #Catalog AS c WHERE p.Product_ID = c.ProductId);
+        WHERE EXISTS (SELECT 1 FROM #MultiAcctCatalog AS c WHERE p.Product_ID = c.ProductId);
 
         IF OBJECT_ID('tempdb..#ProductCarriers') IS NOT NULL
             BEGIN
@@ -170,7 +170,7 @@ BEGIN
             rd.UPC
         INTO #UPC
         FROM Products.tblRetailDetails AS rd
-        JOIN #Catalog AS c ON c.ProductId = rd.ProductId;
+        JOIN #MultiAcctCatalog AS c ON c.ProductId = rd.ProductId;
 
 
         INSERT INTO #Results
@@ -207,7 +207,7 @@ BEGIN
                 OR p.SubProductTypeId = @KittedMpSubTypeId,
                 1, 0
             ) AS IsSerialized
-        FROM #Catalog AS c
+        FROM #MultiAcctCatalog AS c
         JOIN #ProductInfo AS p ON c.ProductId = p.Product_ID
         LEFT JOIN #ProductCarriers AS pc ON pc.ProductId = c.ProductId
         LEFT JOIN #MultiCarrier AS mc ON mc.ProductId = c.ProductId
