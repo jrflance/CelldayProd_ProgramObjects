@@ -2,10 +2,11 @@
 
 --changeset Sammer Bazerbashi:0D55AB stripComments:false runOnChange:true endDelimiter:/
 -- noqa: disable=all
-/*******************************************************************  
+-- noqa: disable=all
+/*******************************************************************
 	Author:         Samer Bazerbashi
-	Version:        
-					1.0 2015-06-02 Used [Report].[P_Report_Trac_Data_Feed_All_Carriers_By_Unique_Address] as the basis of this report and added all the new 
+	Version:
+					1.0 2015-06-02 Used [Report].[P_Report_Trac_Data_Feed_All_Carriers_By_Unique_Address] as the basis of this report and added all the new
 					requirements on top of it
 					1.1 2015-06-12 Added filter to remove any RTR ith no RTR_TXN_REFERENCE1.  This indicates a non simple mobile vendor.
 					2.0 removed join on act=batc_txt, added batch_txt restriction for vendor 33550, joined on Tracfone.tbltracfoneproduct to get product list
@@ -21,7 +22,7 @@
 					4.1 2016-01-14 Added case to handle different addon values for RTR phone_number: instead of just phone number:.
 					5.0 2016-01-22 Added new RTR activation reporting specs.  If vendor is TracSimple activation then reporting for o1.sku goes to RTR_REFERENCE1 instead of TXN_REFERENCE1.
 					6.0 Added RTR vendor reporting
-					7.0 2016-02-29 Added Marketplace subsidy in Attribute 1 field based on SMSNE flag and handset flag 
+					7.0 2016-02-29 Added Marketplace subsidy in Attribute 1 field based on SMSNE flag and handset flag
 					8.0 2016-03-30 Added Tracfone OrderID to Attribut 2 field.
 					8.1 2016-04-27 Trac requested it to be Attribute 3 instead.
 					9.0 2016-09-29 Changed the reporting to use our RTR SKU. Tracfone can now accept it for payments.
@@ -38,11 +39,11 @@
 				   19.0 2019-01-16 AB Updated Cast of ATTRIBUTE_4 and ATTRIBUTE_5
 				   20.0 2019-12-06 BS (SB reviewed) Used IDs from promo orders instead of original orders to get promos.  Added distinct to all final inserts or selects to manage issues with duplicate records
 				   21.0 2019-12-26 CH (add index IX_OrderManagmenttblProviderReference_OrderNo and Option Recompile)
-				   22.0 2020-02-17 SB Added CStore and Rural logic to filter data 
+				   22.0 2020-02-17 SB Added CStore and Rural logic to filter data
 				   22.1 2020-02-24 KMH Added '' around zip code to prevent nvarchar conversion error
 				   23.0 2020-06-04 SB Added distinct to insert for @runinsert = 2 count check
 				   24.0 2020-09-30 SB Added Amazon cash qualified promo activation orders in Attribute 1 for reimbursement
-				   25.0 2021-03-19 SB Added TW handling for additional lines  
+				   25.0 2021-03-19 SB Added TW handling for additional lines
 				   26.0 2023-05-03 SB Added manually created promo support (created today but activation is in the past)
 				   27.0 2023-05-09 SB Added session IDs to Attribute 2
 				   28.0 2023-07-27 SB Removed old promo reporting and switched to amount from promo order
@@ -51,15 +52,16 @@
 				   31.0 2023-10-02 SB Added VZW RTR, Pin, and Sim
 				   32.0 2023-10-17 SB Add pending rebates
 				   33.0 2024-02-23 SB Activation fee in Attribute 1
+				   34.0 2024-03-07 SB Price - discount added to activation fee logic to handle 100% discount
 	Reason:         New Tracfone reporting to be used 6/2015 for a daily feed.  All pins and RTRs for all accounts to be reported.
 	Sample call:    EXEC [Report].[P_Report_TSP_Transaction_Feed] NULL (to be used for ssrs)
 					EXEC [Report].[P_Report_TSP_Transaction_Feed] '2015-06-22',1  (to be used in SQL or the report menu)
-	Frequency:      High 
+	Frequency:      High
 
 	*********************************************************************/
 -- noqa: enable=all
 -- noqa: disable=all
-CREATE OR ALTER PROC [Report].[P_Report_TSP_Transaction_Feed]
+CREATE   PROC [Report].[P_Report_TSP_Transaction_Feed]
     (
         @Date DATETIME,
         @RunInsert TINYINT,
@@ -214,9 +216,9 @@ BEGIN
                     o.Order_No,
                     o.User_ID,
                     CASE
-                        WHEN o.OrderType_ID IN ( 1, 9, 19, 43, 44) 
+                        WHEN o.OrderType_ID IN ( 1, 9, 19, 43, 44)
                             THEN 1
-                        WHEN o.OrderType_ID IN (22, 23) 
+                        WHEN o.OrderType_ID IN (22, 23)
                             THEN 2
                     END AS Choice,
                     '' AS TWSKU
@@ -268,7 +270,7 @@ BEGIN
                             THEN 2
                     END AS Choice,
                     '' AS TWSKU
-                FROM dbo.Order_No AS o WITH (READUNCOMMITTED) --, INDEX = Ix_OrderNo_DateFilled ) 
+                FROM dbo.Order_No AS o WITH (READUNCOMMITTED) --, INDEX = Ix_OrderNo_DateFilled )
                 WHERE
                     o.DateFilled
                     BETWEEN @DateCast AND DATEADD(DAY, 1, @DateCast)
@@ -294,7 +296,7 @@ BEGIN
                 WHERE
                     o.DateFilled
                     BETWEEN @DateCast AND DATEADD(DAY, 1, @DateCast)
-                    --not including filled in case an order goes over API and pin is used but order doesn't get filled, 
+                    --not including filled in case an order goes over API and pin is used but order doesn't get filled,
                     --also no void = 1 because we need to catch manually failed order and have Trac check on the pin usage
                     AND o.Process = 0
                     AND o.Void = 0
@@ -315,9 +317,9 @@ BEGIN
                 WHERE
                     o.DateFilled
                     BETWEEN @DateCast AND DATEADD(DAY, 1, @DateCast)
-                    --not including filled in case an order goes over API and pin is used but order doesn't get filled, 
+                    --not including filled in case an order goes over API and pin is used but order doesn't get filled,
                     --also no void = 1 because we need to catch manually failed order and have Trac check on the pin usage
-                    AND o.Void = 1 
+                    AND o.Void = 1
                     AND o.OrderType_ID IN (22, 23)
                     AND o.Account_ID != 22972
                 GROUP BY
@@ -345,7 +347,7 @@ BEGIN
                     o.Order_No,
                     o.User_ID
                 UNION
-                SELECT 
+                SELECT
                     o.DateFilled,
                     CAST(o.Account_ID AS VARCHAR(10)) AS Account_ID,
                     o.Order_No,
@@ -368,7 +370,7 @@ BEGIN
                     o.User_ID,
                     2 Choice,
                     '' TWSKU
-                FROM dbo.Order_No o WITH (READUNCOMMITTED) --, INDEX = Ix_OrderNo_DateFilled ) 
+                FROM dbo.Order_No o WITH (READUNCOMMITTED) --, INDEX = Ix_OrderNo_DateFilled )
                     JOIN dbo.Order_No o2
                         ON o2.AuthNumber = o.Order_No
                     JOIN dbo.Orders o3
@@ -398,7 +400,7 @@ BEGIN
                         o.Order_No = @order_no
                         OR @order_no IS NULL
                     )
-                OPTION (RECOMPILE) --> V21.0 CH 20191226 use the best index at run time CH 20191226	 
+                OPTION (RECOMPILE) --> V21.0 CH 20191226 use the best index at run time CH 20191226
                 ;
             END;
 
@@ -424,7 +426,7 @@ BEGIN
                     o1.SKU
                 ELSE
                     o1.SKU
-            END TXN_REFERENCE1, --This is the pin column and needs to be changed to bring from 
+            END TXN_REFERENCE1, --This is the pin column and needs to be changed to bring from
             o1.Name AS PRODUCT_NAME,
             o1.Product_ID AS PRODUCT_SKU,
             cat.Name AS Product_Supplier,
@@ -530,7 +532,7 @@ BEGIN
                     o1.SKU
                 ELSE
                     o1.SKU
-            END TXN_REFERENCE1, --This is the pin column and needs to be changed to bring from 
+            END TXN_REFERENCE1, --This is the pin column and needs to be changed to bring from
             o1.Name AS PRODUCT_NAME,
             o1.Product_ID AS PRODUCT_SKU,
             cat.Name AS Product_Supplier,
@@ -1043,7 +1045,7 @@ BEGIN
                             SELECT 1
                             FROM dbo.Product_SerialNum psn
                                 JOIN Products.tblProductCarrierMapping pcm
-                                    ON psn.Product_ID = pcm.ProductId -- Get SerialNumber_txt carrier 
+                                    ON psn.Product_ID = pcm.ProductId -- Get SerialNumber_txt carrier
                                 JOIN Products.tblProductCarrierMapping pcm1
                                     ON o1.Product_ID = pcm1.ProductId --Get order carrier
                                     AND pcm.CarrierId = pcm1.CarrierId --Make sure order carrier and SerialNumber_txt carrier are the same
@@ -1060,7 +1062,7 @@ BEGIN
                                 SELECT 1
                                 FROM dbo.Product_SerialNum psn
                                     JOIN Products.tblProductCarrierMapping pcm
-                                        ON psn.Product_ID = pcm.ProductId -- Get SerialNumber_txt carrier 
+                                        ON psn.Product_ID = pcm.ProductId -- Get SerialNumber_txt carrier
                                     JOIN Products.tblProductCarrierMapping pcm1
                                         ON o1.Product_ID = pcm1.ProductId --Get order carrier
                                         AND pcm.CarrierId = pcm1.CarrierId --Make sure order carrier and SerialNumber_txt carrier are the same
@@ -1088,7 +1090,7 @@ BEGIN
                                 SELECT 1
                                 FROM dbo.Product_SerialNum psn
                                     JOIN Products.tblProductCarrierMapping pcm
-                                        ON psn.Product_ID = pcm.ProductId -- Get SerialNumber_txt carrier 
+                                        ON psn.Product_ID = pcm.ProductId -- Get SerialNumber_txt carrier
                                     JOIN Products.tblProductCarrierMapping pcm1
                                         ON o1.Product_ID = pcm1.ProductId --Get order carrier
                                         AND pcm.CarrierId = pcm1.CarrierId --Make sure order carrier and SerialNumber_txt carrier are the same
@@ -1114,7 +1116,7 @@ BEGIN
                                 SELECT 1
                                 FROM dbo.Product_SerialNum psn
                                     JOIN Products.tblProductCarrierMapping pcm
-                                        ON psn.Product_ID = pcm.ProductId -- Get SerialNumber_txt carrier 
+                                        ON psn.Product_ID = pcm.ProductId -- Get SerialNumber_txt carrier
                                     JOIN Products.tblProductCarrierMapping pcm1
                                         ON o1.Product_ID = pcm1.ProductId --Get order carrier
                                         AND pcm.CarrierId = pcm1.CarrierId --Make sure order carrier and SerialNumber_txt carrier are the same
@@ -1131,7 +1133,7 @@ BEGIN
                             SELECT 1
                             FROM dbo.Product_SerialNum psn
                                 JOIN Products.tblProductCarrierMapping pcm
-                                    ON psn.Product_ID = pcm.ProductId -- Get SerialNumber_txt carrier 
+                                    ON psn.Product_ID = pcm.ProductId -- Get SerialNumber_txt carrier
                                 JOIN Products.tblProductCarrierMapping pcm1
                                     ON o1.Product_ID = pcm1.ProductId --Get order carrier
                                     AND pcm.CarrierId = pcm1.CarrierId --Make sure order carrier and SerialNumber_txt carrier are the same
@@ -1227,7 +1229,7 @@ BEGIN
                             SELECT 1
                             FROM dbo.Product_SerialNum psn
                                 JOIN Products.tblProductCarrierMapping pcm
-                                    ON psn.Product_ID = pcm.ProductId -- Get SerialNumber_txt carrier 
+                                    ON psn.Product_ID = pcm.ProductId -- Get SerialNumber_txt carrier
                                 JOIN Products.tblProductCarrierMapping pcm1
                                     ON o1.Product_ID = pcm1.ProductId --Get order carrier
                                     AND pcm.CarrierId = pcm1.CarrierId --Make sure order carrier and SerialNumber_txt carrier are the same
@@ -1244,7 +1246,7 @@ BEGIN
                                 SELECT 1
                                 FROM dbo.Product_SerialNum psn
                                     JOIN Products.tblProductCarrierMapping pcm
-                                        ON psn.Product_ID = pcm.ProductId -- Get SerialNumber_txt carrier 
+                                        ON psn.Product_ID = pcm.ProductId -- Get SerialNumber_txt carrier
                                     JOIN Products.tblProductCarrierMapping pcm1
                                         ON o1.Product_ID = pcm1.ProductId --Get order carrier
                                         AND pcm.CarrierId = pcm1.CarrierId --Make sure order carrier and SerialNumber_txt carrier are the same
@@ -1272,7 +1274,7 @@ BEGIN
                                 SELECT 1
                                 FROM dbo.Product_SerialNum psn
                                     JOIN Products.tblProductCarrierMapping pcm
-                                        ON psn.Product_ID = pcm.ProductId -- Get SerialNumber_txt carrier 
+                                        ON psn.Product_ID = pcm.ProductId -- Get SerialNumber_txt carrier
                                     JOIN Products.tblProductCarrierMapping pcm1
                                         ON o1.Product_ID = pcm1.ProductId --Get order carrier
                                         AND pcm.CarrierId = pcm1.CarrierId --Make sure order carrier and SerialNumber_txt carrier are the same
@@ -1298,7 +1300,7 @@ BEGIN
                                 SELECT 1
                                 FROM dbo.Product_SerialNum psn
                                     JOIN Products.tblProductCarrierMapping pcm
-                                        ON psn.Product_ID = pcm.ProductId -- Get SerialNumber_txt carrier 
+                                        ON psn.Product_ID = pcm.ProductId -- Get SerialNumber_txt carrier
                                     JOIN Products.tblProductCarrierMapping pcm1
                                         ON o1.Product_ID = pcm1.ProductId --Get order carrier
                                         AND pcm.CarrierId = pcm1.CarrierId --Make sure order carrier and SerialNumber_txt carrier are the same
@@ -1315,7 +1317,7 @@ BEGIN
                             SELECT 1
                             FROM dbo.Product_SerialNum psn
                                 JOIN Products.tblProductCarrierMapping pcm
-                                    ON psn.Product_ID = pcm.ProductId -- Get SerialNumber_txt carrier 
+                                    ON psn.Product_ID = pcm.ProductId -- Get SerialNumber_txt carrier
                                 JOIN Products.tblProductCarrierMapping pcm1
                                     ON o1.Product_ID = pcm1.ProductId --Get order carrier
                                     AND pcm.CarrierId = pcm1.CarrierId --Make sure order carrier and SerialNumber_txt carrier are the same
@@ -1386,7 +1388,7 @@ BEGIN
             DROP TABLE #TracSim;
         END;
         SELECT o.Datefilled AS HOST_TIMESTAMP,
-            '' TXN_REFERENCE1,                    --This is the pin column and needs to be changed to bring from 
+            '' TXN_REFERENCE1,                    --This is the pin column and needs to be changed to bring from
             o1.Name AS PRODUCT_NAME,
             o1.Product_ID AS PRODUCT_SKU,
             cid.Carrier_Name AS Product_Supplier, --??? for device or for sim?
@@ -1427,7 +1429,7 @@ BEGIN
         WHERE o.Choice = 3
         UNION
         SELECT o.Datefilled AS HOST_TIMESTAMP,
-            '' TXN_REFERENCE1,                                           --This is the pin column and needs to be changed to bring from 
+            '' TXN_REFERENCE1,                                           --This is the pin column and needs to be changed to bring from
             o1.Name AS PRODUCT_NAME,
             o1.Product_ID AS PRODUCT_SKU,
             cid.Carrier_Name AS Product_Supplier,                        --??? for device or for sim?
@@ -1475,7 +1477,7 @@ BEGIN
         WHERE o.Choice = 2
         UNION
         SELECT o.Datefilled AS HOST_TIMESTAMP,
-            '' TXN_REFERENCE1,                                           --This is the pin column and needs to be changed to bring from 
+            '' TXN_REFERENCE1,                                           --This is the pin column and needs to be changed to bring from
             o1.Name AS PRODUCT_NAME,
             o1.Product_ID AS PRODUCT_SKU,
             cid.Carrier_Name AS Product_Supplier,                        --??? for device or for sim?
@@ -1529,7 +1531,7 @@ BEGIN
             DROP TABLE #VZWSim;
         END;
         SELECT o.Datefilled AS HOST_TIMESTAMP,
-            '' TXN_REFERENCE1,                    --This is the pin column and needs to be changed to bring from 
+            '' TXN_REFERENCE1,                    --This is the pin column and needs to be changed to bring from
             o1.Name AS PRODUCT_NAME,
             o1.Product_ID AS PRODUCT_SKU,
             cid.Carrier_Name AS Product_Supplier, --??? for device or for sim?
@@ -1570,7 +1572,7 @@ BEGIN
         WHERE o.Choice = 3
         UNION
         SELECT o.Datefilled AS HOST_TIMESTAMP,
-            '' TXN_REFERENCE1,                                           --This is the pin column and needs to be changed to bring from 
+            '' TXN_REFERENCE1,                                           --This is the pin column and needs to be changed to bring from
             o1.Name AS PRODUCT_NAME,
             o1.Product_ID AS PRODUCT_SKU,
             cid.Carrier_Name AS Product_Supplier,                        --??? for device or for sim?
@@ -2105,7 +2107,7 @@ BEGIN
             JOIN #POFilledA po
                 ON ap.ID = po.ID;
 
-        -- SELECT * FROM #ActivationAtributes		
+        -- SELECT * FROM #ActivationAtributes
 
 
 
@@ -2117,7 +2119,7 @@ BEGIN
         SELECT o.Order_no,
             o.Choice,
             o.TWSKU,
-            o2.Price
+            ISNULL(o2.Price,0) - ISNULL(o2.DiscAmount,0) Price
         INTO #activationfee
         FROM #orders o
             LEFT JOIN order_no o1
@@ -2494,5 +2496,5 @@ BEGIN
             ERROR_MESSAGE() AS ErrorMessage;
     END catch
 END
--- noqa: disable=all
+-- noqa: disable=all;
 /
