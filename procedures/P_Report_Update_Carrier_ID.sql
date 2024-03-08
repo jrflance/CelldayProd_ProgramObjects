@@ -17,6 +17,7 @@ GO
 	Description	: SP used in CRM to view and update Carrier IDs on IMEIs/ICCIDs
 				:
 	Test Data   : (2,259617,1,'356074104342550,89148000006962297238,015865000895499,89148000008091564397',29)
+    NG20240307  : Added Sarah Haver to user list that can use this report
 ============================================= */
 CREATE OR ALTER PROCEDURE [Report].[P_Report_Update_Carrier_ID]
     (
@@ -47,7 +48,7 @@ BEGIN
                 1
             );
 
-        IF @UserID NOT IN (279685, 259617, 257210) -- Matt Moore, Nic Griesdorn, Tyler Fee
+        IF @UserID NOT IN (279685, 259617, 257210, 280015) -- Matt Moore, Nic Griesdorn, Tyler Fee, Sarah Haver NG20240307
             RAISERROR (
                 -- noqa: disable=all
                 'This user is not authorized to user this report, please contact T-CETRA Product Development Team if you need to change the carrier ID of a device.',
