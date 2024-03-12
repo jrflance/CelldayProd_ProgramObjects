@@ -8,7 +8,7 @@ warnings = L062,L014,L016
 exclude_rules = CP02,RF01,ST06
 
 #default 80
-max_line_length = 150 
+max_line_length = 150
 
 large_file_skip_byte_limit = 0
 
@@ -19,7 +19,7 @@ aliasing = explicit
 aliasing = explicit
 
 
-[sqlfluff:rules:aliasing.length] 
+[sqlfluff:rules:aliasing.length]
 max_alias_lenght = 6
 
 [sqlfluff:rules:ambiguous.column_references]
