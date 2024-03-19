@@ -1,16 +1,19 @@
 --liquibase formatted sql
 
---changeset melissarios:213112 stripComments:false runOnChange:true endDelimiter:/
+--changeset melissarios:213113 stripComments:false runOnChange:true endDelimiter:/
 -- noqa: disable=all
 /*================================================================================================================
       Author : Melissa Rios
  Create Date : 20240311
  Description : Pulls summary of the previous day's invoices for any given account id. Intended to be sent via ftp.
+ MR20240313  : Added Date Parameters and joined #ListOfAccounts
  ===============================================================================================================*/
 -- noqa: enable=all
 CREATE OR ALTER PROCEDURE [Report].[P_Report_Invoice_Summary]
     (
-        @AccountID INT
+        @AccountID INT,
+        @StartDate DATETIME,
+        @EndDate DATETIME
     )
 AS
 BEGIN
@@ -18,10 +21,31 @@ BEGIN
         SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 
         DECLARE
-            @StartDate DATE = CASE
+            @BeginPeriod DATETIME = @StartDate,
+            @EndPeriod DATETIME = @EndDate
+
+        IF @EndPeriod IS NULL
+            SET @EndPeriod = GETDATE()
+
+        IF @BeginPeriod IS NULL
+            SET @BeginPeriod = CASE
                 WHEN DATENAME(WEEKDAY, GETDATE()) = 'Monday' THEN CAST(DATEADD(DAY, -3, GETDATE()) AS DATE)
                 ELSE CAST(DATEADD(DAY, -1, GETDATE()) AS DATE)
             END
+
+        IF @BeginPeriod > @EndPeriod
+            BEGIN
+                SELECT '"Start Date:" can not be later than the "End Date:",' AS [Error]
+                UNION
+                SELECT '      please re-enter your dates!' AS [Error]
+                RETURN
+            END
+
+        IF (DATEADD(YEAR, -1, GETDATE()) > ISNULL(@BeginPeriod, '1900-01-01'))
+            BEGIN
+                SELECT 'Please select a Start Date within the past year.' AS [Error];
+                RETURN;
+            END;
 
         IF OBJECT_ID('tempdb..#ListOfAccounts') IS NOT NULL
             BEGIN
@@ -68,14 +92,15 @@ BEGIN
             ON a.Account_ID = n.Account_ID
         JOIN dbo.Customers AS c
             ON c.Customer_ID = a.Customer_ID
+        JOIN #ListOfAccounts AS la
+            ON la.AccountID = n.Account_ID
         WHERE
-            n.Account_ID = @AccountID
-            AND n.OrderType_ID IN (5, 6)
+            n.OrderType_ID IN (5, 6)
             AND n.Filled = 1
             AND n.Void = 0
             AND n.Process = 1
-            AND n.DateDue >= @StartDate
-            AND n.DateDue < CAST(GETDATE() AS DATE)
+            AND n.DateDue >= @BeginPeriod
+            AND n.DateDue < @EndPeriod
 
     END TRY
     BEGIN CATCH
