@@ -61,7 +61,7 @@
 	*********************************************************************/
 -- noqa: enable=all
 -- noqa: disable=all
-CREATE   PROC [Report].[P_Report_TSP_Transaction_Feed]
+CREATE OR ALTER PROC [Report].[P_Report_TSP_Transaction_Feed]
     (
         @Date DATETIME,
         @RunInsert TINYINT,
