@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset melissarios:213109 stripComments:false runOnChange:true endDelimiter:/
+--changeset BrandonStahl:f9974c16-e660-4575-84ef-4ab3eaea85c0 stripComments:false runOnChange:true endDelimiter:/
 -- noqa: disable=all
 /*=============================================
 --      Author : Jacob Lowe -- noqa: LT01
@@ -48,7 +48,7 @@ Broke the logic fully into @Option 0 and @Option 1 so that all of the logic AND 
 --Usage : EXEC [Report].[P_Report_MA_Invoice_Commission_Details_With_Tree_Commissions] 2, 42779039
 -- =============================================*/
 -- noqa: enable=all
-ALTER   PROCEDURE [Report].[P_Report_MA_Invoice_Commission_Details_With_Tree_Commissions]
+ALTER PROCEDURE [Report].[P_Report_MA_Invoice_Commission_Details_With_Tree_Commissions]
     (
         @sessionID INT
         , @Option INT
@@ -355,7 +355,7 @@ BEGIN
                     , o.Product_ID
                     , o.Price
                     , o.DiscAmount
-					, ISNULL(o.Fee, 0.00) AS Fee --MR20240215
+                    , ISNULL(o.Fee, 0.00) AS Fee --MR20240215
                     , o.Product_ID AS [Product SKU]
                     , CASE
                         WHEN pt.ProductTypeName = 'PinRtr' THEN 'Airtime'
@@ -435,7 +435,7 @@ BEGIN
                         , pc1.ProductTypeName
                         , pc1.Price
                         , pc1.DiscAmount
-						, pc1.Fee
+                        , pc1.Fee
                         , n.Account_ID
                         , n.DateOrdered
                         , n.DateFilled	--KMH20230831
@@ -498,8 +498,8 @@ BEGIN
                     , m.ProductTypeName
                     , m.Price
                     , m.DiscAmount
-					, m.Fee
-					, (m.Price - m.DiscAmount + m.Fee) AS RetailCost --MR20240215
+                    , m.Fee
+                    , (m.Price - m.DiscAmount + m.Fee) AS RetailCost --MR20240215
                     , m.Account_ID
                     , m.DateOrdered
                     , m.DateFilled
@@ -640,7 +640,7 @@ BEGIN
                     , o.Product_ID
                     , o.Price
                     , o.DiscAmount
-					, ISNULL(o.Fee, 0.00) AS Fee
+                    , ISNULL(o.Fee, 0.00) AS Fee
                     , o.Product_ID AS [Product SKU]
                     , CASE
                         WHEN pt.ProductTypeName = 'PinRtr' THEN 'Airtime'
@@ -698,7 +698,7 @@ BEGIN
                         , pc1.ProductTypeName
                         , pc1.Price
                         , pc1.DiscAmount
-						, pc1.Fee
+                        , pc1.Fee
                         , n.Account_ID
                         , n.DateOrdered
                         , n.DateFilled	--KMH20230831
@@ -730,8 +730,8 @@ BEGIN
                     , m.ProductTypeName
                     , m.Price
                     , m.DiscAmount
-					, m.Fee --MR20240215
-					, (m.Price - m.DiscAmount + m.Fee) AS RetailCost --MR20240215
+                    , m.Fee --MR20240215
+                    , (m.Price - m.DiscAmount + m.Fee) AS RetailCost --MR20240215
                     , m.Account_ID
                     , m.DateOrdered
                     , m.DateFilled
