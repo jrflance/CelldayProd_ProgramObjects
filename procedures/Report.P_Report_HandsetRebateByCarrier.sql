@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset KarinaMasihHudson:2d91fc13712f48b1a649d24938b9fcd2 stripComments:false runOnChange:true
+--changeset KarinaMasihHudson:0d102f22f9534e65aaad2330914959c7 stripComments:false runOnChange:true splitStatements:false
 
 /*=============================================
               :
@@ -245,7 +245,7 @@ BEGIN TRY
         LEFT JOIN #IMEI AS i
             ON i.OrderID = o.ID
         LEFT JOIN #SIM AS s
-            ON s.OrderID = i.OrderID
+            ON s.OrderID = o.ID
         LEFT JOIN #PhoneNumbers AS ph
             ON ph.OrderID = o.ID
         LEFT JOIN #Promotion AS pr
