@@ -11,15 +11,17 @@
 -- AB20171109  : Update second update @AccountType_ID to @accountType_ID2
 -- AB20171117  : Update DateDue to CAST(DateDue as DATE) AB1
 -- SB20240325  : Insert bill item number into addons
+-- SB20240329  : Added missing variable
 -- example : EXEC Tracfone.[P_ProcessBilling_AutopayandEnrollment_Residual] @FileID = 302
 
 -- =============================================
 -- noqa: enable=all
 -- noqa: disable=all
-CREATE OR Alter PROC Tracfone.P_ProcessBilling_AutopayandEnrollment_Residual
+CREATE OR ALTER PROCEDURE Tracfone.P_ProcessBilling_AutopayandEnrollment_Residual
 (@FileID INT)
 AS
 BEGIN
+
 
     CREATE TABLE #ListOrdersToProcess
     (
@@ -229,7 +231,8 @@ BEGIN
            price,
            AccountType_ID,
            Sim,
-           DealerCommissionDetailID
+           DealerCommissionDetailID,
+           RTR_TXN_REFERENCE1
     FROM #ListOrdersToProcess
     WHERE COMMISSION_TYPE = 'AUTOPAY ENROLLMENT';
 
@@ -257,7 +260,8 @@ BEGIN
          @Price2,
          @AccountType_ID2,
          @Sim2,
-         @DealerCommissionDetailID2;
+         @DealerCommissionDetailID2,
+		 @Rtrtxnreference2;
     WHILE @@FETCH_STATUS = 0
     BEGIN
 
@@ -269,7 +273,6 @@ BEGIN
             SET @paymentOrderType2 = 38;
         ELSE IF (@AccountType_ID2 = 2)
             SET @paymentOrderType2 = 28;
-
 
         EXEC OrderManagment.P_OrderManagment_Build_Full_Order @AccountID = @AccountID2,              -- int
                                                               @Datefrom = @DateFrom2,                -- datetime
@@ -367,7 +370,7 @@ BEGIN
              @AccountType_ID2,
              @Sim2,
              @DealerCommissionDetailID2,
-             @Rtrtxnreference2;;;
+             @Rtrtxnreference2;
     END;
 
     CLOSE Transaction_cursor2;
@@ -377,6 +380,5 @@ BEGIN
     DROP TABLE #ListOrdersToProcess;
 
 END;
-
 -- noqa: disable=all;
 /
