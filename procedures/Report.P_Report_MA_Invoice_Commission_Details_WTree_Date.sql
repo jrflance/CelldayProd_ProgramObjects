@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset KarinaMasihHudson:50bb507468f1460eb7e04b0cb282fe60 stripComments:false runOnChange:true splitStatements:false
+--changeset KarinaMasihHudson:de0b114d201640fea268b9ab07822b90 stripComments:false runOnChange:true splitStatements:false
 /*==========================================================================================
     Rework   : Dana Jones
     Date     : June 28, 2023
@@ -55,6 +55,7 @@
 				   : Removed Commission_Amt DECIMAL(9,2), OrderType_ID INT from #ListOfOrders1
 	--  MR20240215 : Removed join to product carrier mapping table in both options' final select statements.
 					 Add Fee column and Retail Cost column.
+ KMH20240403 : Added join for 'SimType' for residuals to stop duplication on OIA
 ==========================================================================================
          Usage : EXEC [Report].[P_Report_MA_Invoice_Commission_Details_WTree_Date] 155536,'20230801','20230802'
 ==========================================================================================*/
@@ -451,7 +452,12 @@ BEGIN TRY
             FROM #ListOfOrders0 AS d
             JOIN dbo.tblOrderItemAddons AS oiar
                 ON oiar.OrderID = d.Orders_ID
-            JOIN dbo.tblOrderItemAddons AS oias
+            JOIN
+                dbo.tblOrderItemAddons AS oias
+                    JOIN dbo.tblAddonFamily AS aofs
+                        ON
+                            aofs.AddonID = oias.AddonsID
+                            AND aofs.AddonTypeName IN ('SimType', 'SimBYOPType')
                 ON oias.AddonsValue = oiar.AddonsValue
             JOIN
                 dbo.tblOrderItemAddons AS oia
@@ -493,6 +499,10 @@ BEGIN TRY
             -- JOIN dbo.tblOrderItemAddons AS oiar
             -- ON oiar.OrderID = d.Orders_ID
             -- JOIN dbo.tblOrderItemAddons AS oias
+            -- JOIN dbo.tblAddonFamily AS aofs
+            -- ON
+            -- aofs.AddonID = oias.AddonsID
+            -- AND aofs.AddonTypeName IN ('SimType', 'SimBYOPType')
             -- ON oias.AddonsValue = oiar.AddonsValue
             -- JOIN
             -- dbo.tblOrderItemAddons AS oia
