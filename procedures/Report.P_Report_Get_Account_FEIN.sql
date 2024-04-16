@@ -9,7 +9,7 @@
 -- Description : Returns a list of detokenized Federal Tax Ids per account
 --             :
 -- =============================================
-ALTER PROCEDURE [Report].[P_Report_Get_Account_FEIN]
+CREATE OR ALTER PROCEDURE [Report].[P_Report_Get_Account_FEIN]
     (
         @AccountIds VARCHAR(MAX),
         @sessionID INT,
