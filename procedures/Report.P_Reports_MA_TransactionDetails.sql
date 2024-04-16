@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset KarinaMasihHudson:50bb507468f1460eb7e04b0cb282fe60 stripComments:false runOnChange:true splitStatements:false
+--changeset KarinaMasihHudson:93394c11aa2d4904a99b6b3cca26c206 stripComments:false runOnChange:true splitStatements:false
 /*==============================================================================================================
            Rework  : Nicolas Griesdorn
            Date    : 01-25-2024
@@ -23,6 +23,7 @@ Originally Created : 2020-09-21
 					 - In cases where commission was generated, use Orders_ID, Order_Commission_SK from Order_Commission
 					 - In cases with no commission, generate a $0 for parent and use Order.ID and ParentAccountID
 					 Add $0 commission line for all MAs in an account tree not already being reported
+	   KMH20240415 : Updated final join for MA display; was only displaying top
 Original Procedure : [Report].[P_Reports_TransactionDetails] by MRios
 
 ================================================================================================================
@@ -847,9 +848,11 @@ BEGIN
         JOIN #AccountTree AS act
             ON
                 act.Account_ID = d.Account_ID
-                AND act.IsDirectParent = 1
+                --AND act.IsDirectParent = 1
         LEFT JOIN #ListOfCommInfo AS lci
-            ON lci.Orders_ID = d.OrderID
+            ON
+                lci.Orders_ID = d.OrderID
+                AND lci.Account_ID = act.ParentAccounts
         LEFT JOIN #BillItem AS bi --KMH20240221
             ON bi.OrderID = d.OrderID
         LEFT JOIN #ResidualData AS rd --KMH20240221
