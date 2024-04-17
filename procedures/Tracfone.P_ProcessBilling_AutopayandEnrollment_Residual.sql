@@ -17,7 +17,7 @@
 -- =============================================
 -- noqa: enable=all
 -- noqa: disable=all
-CREATE OR ALTER PROCEDURE Tracfone.P_ProcessBilling_AutopayandEnrollment_Residual
+CREATE OR ALTER PROC Tracfone.P_ProcessBilling_AutopayandEnrollment_Residual
 (@FileID INT)
 AS
 BEGIN
