@@ -1,3 +1,7 @@
+--liquibase formatted sql
+
+--changeset  BrandonStahl:2203b772-a0aa stripComments:false runOnChange:true splitStatements:false
+
 --=============================================
 --				:
 --	Author		: Brandon Stahl
@@ -28,4 +32,4 @@ BEGIN
 
     EXEC [Report].[P_GetMultiAccountCatalog] @AccountIdList;
 
-END;
+END
