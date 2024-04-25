@@ -48,7 +48,7 @@ BEGIN
         SELECT
             A.Chr1,
             A.Chr2,
-            A.Chr3,
+            CONVERT(DATETIME, A.Chr3, 103) AS Act_DateOrdered,
             A.Chr4,
             A.Chr5,
             A.Chr6,
@@ -56,7 +56,7 @@ BEGIN
             A.Chr8,
             A.Chr9,
             A.Chr10,
-            A.Chr11,
+            CONVERT(DATETIME, A.Chr11, 103) AS Return_DateOrdered,
             A.Chr12,
             REPLACE(A.Chr13, CHAR(10), '') AS TBV_DECISION,
             t.FileID,
