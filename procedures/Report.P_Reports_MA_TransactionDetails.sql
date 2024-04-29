@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset KarinaMasihHudson:93394c11aa2d4904a99b6b3cca26c206 stripComments:false runOnChange:true splitStatements:false
+--changeset KarinaMasihHudson:a3632d49993f43239ea70376d0ad7332 stripComments:false runOnChange:true splitStatements:false
 /*==============================================================================================================
            Rework  : Nicolas Griesdorn
            Date    : 01-25-2024
@@ -24,6 +24,7 @@ Originally Created : 2020-09-21
 					 - In cases with no commission, generate a $0 for parent and use Order.ID and ParentAccountID
 					 Add $0 commission line for all MAs in an account tree not already being reported
 	   KMH20240415 : Updated final join for MA display; was only displaying top
+	   KMH20240415 : Changed merchant invoice date due to be the order's date due instead of invoice date due per Sammer
 Original Procedure : [Report].[P_Reports_TransactionDetails] by MRios
 
 ================================================================================================================
@@ -257,7 +258,7 @@ BEGIN
             , d.ParentItemID
             --, obm.OrderBatchId AS [Batch#]
             , n.STATUS AS MerchantInvoiceNum
-            , n1.DateDue AS MerchantDateDue
+            , n.DateDue AS MerchantDateDue
             , CASE WHEN n.Paid = 1 THEN 'Paid' ELSE 'Not Paid' END AS [Payment Status]			--KMH20231222
             , n.OrderType_ID --KMH20240221
             , d.SKU  --KMH20240221
@@ -273,8 +274,8 @@ BEGIN
             ON C.Customer_ID = n.ShipTo
         JOIN dbo.Products AS p --KMH20240221
             ON p.Product_ID = d.Product_ID
-        LEFT JOIN dbo.Order_No AS n1
-            ON n.STATUS = CONVERT(VARCHAR(50), n1.Order_No)
+        -- LEFT JOIN dbo.Order_No AS n1
+        -- ON n.STATUS = CONVERT(VARCHAR(50), n1.Order_No)
         JOIN dbo.OrderType_ID AS oti
             ON oti.OrderType_ID = n.OrderType_ID
         JOIN dbo.Users AS u
