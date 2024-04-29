@@ -1,7 +1,6 @@
 --liquibase formatted sql
 
---changeset gaberalawi:413c8c5f stripComments:false runOnChange:true
-
+--changeset gaberalawi:48b2df40 stripComments:false runOnChange:true splitStatements:false
 -- =============================================
 --             : 
 --      Author : Melissa Rios
@@ -231,6 +230,7 @@ BEGIN
         WHERE
             n.Paid = 0
             AND n.void = 0
+            AND n.OrderType_ID NOT IN (59, 60, 70, 71) --GA20240423 Reverse Promo Instead of Void
 
         UPDATE n
         SET
@@ -306,7 +306,10 @@ BEGIN
 
         ----------- remove orders we dont reverse -------
         DELETE o
-        FROM #OrdersTiedToTheActivation AS o WHERE o.ordertype_ID NOT IN (25, 31, 32, 59, 60) AND o.PRODUCT_ID <> 9672
+        FROM #OrdersTiedToTheActivation AS o
+        WHERE
+            o.ordertype_ID NOT IN (25, 31, 32, 59, 60, 70, 71)
+            AND o.PRODUCT_ID <> 9672 --GA20240423 Add Consumer Promos
 
         DECLARE
             @ProductID INT,
@@ -331,12 +334,13 @@ BEGIN
         FROM #OrdersTiedToTheActivation
 
         OPEN CUR_REVERSE
-        FETCH NEXT FROM CUR_REVERSE INTO @ProductID,
-        @ReverseAmount,
+        FETCH NEXT FROM CUR_REVERSE INTO
+        @ProductID,
         @ReverseOrdertypeID,
         @ReverseAccountID,
         @ReverseAuthNumber,
-        @REMOVEORDER
+        @REMOVEORDER,
+        @ReverseAmount
         WHILE @@FETCH_STATUS = 0
             BEGIN
                 EXEC OrderManagment.P_OrderManagment_Build_Full_Pending_Order
@@ -347,19 +351,21 @@ BEGIN
                     @ProductID = @ProductID,							-- int
                     @Amount = @ReverseAmount,							-- decimal(9, 2)
                     @DiscountAmount = 0,								-- decimal(5, 2)
-                    @NewOrderID = @ReturnOrderID OUTPUT,			-- int
+                    @NewOrderID = @RtnNewOrderID OUTPUT,			-- int
                     @NewOrderNumber = @RtnNewOrderNumber OUTPUT;	-- int
 
                 DELETE FROM #OrdersTiedToTheActivation WHERE AdditionalOrder_No = @REMOVEORDER
 
-                FETCH NEXT FROM CUR_REVERSE
-                INTO @ProductID,
-                @ReverseAmount,
+                FETCH NEXT FROM CUR_REVERSE INTO
+                @ProductID,
                 @ReverseOrdertypeID,
                 @ReverseAccountID,
                 @ReverseAuthNumber,
-                @REMOVEORDER
+                @REMOVEORDER,
+                @ReverseAmount
             END
+        CLOSE CUR_REVERSE
+        DEALLOCATE CUR_REVERSE
 
         ----------- Reverse any commission -----------
         IF OBJECT_ID('tempdb..#Commissions') IS NOT NULL
@@ -394,6 +400,54 @@ BEGIN
             (Commission_Amt) * -1 AS Commission_Amt,
             dbo.fnCalculateDueDate(Account_ID, @GetDate) AS DateDue
         FROM #Commissions
+
+        ----------- Reverse Activation Fee -----------
+        INSERT INTO dbo.Orders
+        (
+            Order_No,
+            Product_ID,
+            Options,
+            Addons,
+            AddonMultP,
+            AddonNonMultP,
+            Price,
+            Quantity,
+            SKU,
+            OptQuant,
+            DiscAmount,
+            Name,
+            E911Tax,
+            Fee,
+            ParentItemID
+        )
+        SELECT
+            @ReturnOrderNumber AS Order_No,
+            Product_ID,
+            N'' AS Options,
+            N'' AS Addons,
+            0.0 AS AddonMultP,
+            0.0 AS AddonNonMultP,
+            Price * -1 AS Price,
+            1 AS Quantity,
+            N'' AS SKU,
+            0 AS OptQuant,
+            DiscAmount * -1 AS DiscAmount,
+            [Name] AS [Name],
+            0 AS E911Tax,
+            0.00 AS Fee,
+            @ReturnOrderID AS ParentItemID
+        FROM #ActivationOrderToReturn WHERE Product_Type = 17
+
+        UPDATE n
+        SET
+            n.OrderTotal =
+            (
+                SELECT ((a.Price - a.DiscAmount + a.Fee) * -1 + n.OrderTotal)
+                FROM #ActivationOrderToReturn AS a
+                WHERE a.Product_Type = 17
+            )
+        FROM dbo.Order_No AS n
+        WHERE n.Order_No = @ReturnOrderNumber
 
         COMMIT TRANSACTION [Tran1]
 
