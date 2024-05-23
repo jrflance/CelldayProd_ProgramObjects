@@ -19,7 +19,6 @@ CREATE OR ALTER PROCEDURE [Report].[P_Report_eSIM_Errors_By_Brand]
     (
         @SessionID INT
         , @Carrier INT --Simple 4 TBV 292 TBV FWA 404 VZW 7
-        , @PlatformReporting INT
         , @StartDate DATE
         , @EndDate DATE
     )
@@ -83,7 +82,7 @@ BEGIN TRY
 
 
             SELECT
-                APivotTable.[Top Parent]
+                pv.[Top Parent]
                 , pv.Account_ID
                 , pv.Account_Name
                 , pv.Order_No
@@ -179,7 +178,7 @@ BEGIN TRY
                 AND onu.DateOrdered BETWEEN @StartDate AND @EndDate
 
             SELECT
-                APivotTable.[Top Parent]
+                pv.[Top Parent]
                 , pv.Account_ID
                 , pv.Account_Name
                 , pv.Order_No

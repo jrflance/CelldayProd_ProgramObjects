@@ -16,10 +16,10 @@
 	NG20240124  : Added more options to ONu.UserIPAddress and changed the Start and EndDates over to IIF options
 	NG20240314  : Added MobileX as Carrier option
 ============================================= */
-CREATE OR ALTER PROCEDURE [Report].[P_Report_Activations_By_Brand]
+ALTER PROCEDURE [Report].[P_Report_Activations_By_Brand]
     (
         @SessionID INT
-        , @Carrier INT --Simple 4 TBV Non-FWA 292, TBV FWA 404 VZW 7, Tracfone 31, GenMobile 270, Ultra Mobile 8, Cricket Wireless 56, AT&T 26, Xfinity 276, H2O Wireless 2, H2O Bolt 17, FWA 404, MobileX 302 -- noqa: LT05
+        , @Carrier INT  --Simple 4 TBV Non-FWA 292, TBV FWA 404 VZW 7, Tracfone 31, GenMobile 270, Ultra Mobile 8, Cricket Wireless 56, AT&T 26, Xfinity 276, H2O Wireless 2, H2O Bolt 17, FWA 404, MobileX 302 -- noqa: LT05
         , @StartDate DATE
         , @EndDate DATE
     )
@@ -83,7 +83,7 @@ BEGIN TRY
 
 
             SELECT
-                APivotTable.[Top Parent]
+                pv.[Top Parent]
                 , pv.Account_ID
                 , pv.Account_Name
                 , pv.Order_No
@@ -183,7 +183,7 @@ BEGIN TRY
 
 
             SELECT
-                APivotTable.[Top Parent]
+                pv.[Top Parent]
                 , pv.Account_ID
                 , pv.Account_Name
                 , pv.Order_No
@@ -281,7 +281,7 @@ BEGIN TRY
 
 
             SELECT
-                APivotTable.[Top Parent]
+                pv.[Top Parent]
                 , pv.Account_ID
                 , pv.Account_Name
                 , pv.Order_No
