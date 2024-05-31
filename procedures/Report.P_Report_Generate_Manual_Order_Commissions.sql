@@ -9,6 +9,7 @@
 				:
 	Description	: SP used in CRM to generate order commissions for MAs and reverse created commissions for account 2
 				:
+	NG20240530	: Fixed a bug where 0.00 commission were causing the error statement to trigger
 ============================================= */
 CREATE OR ALTER PROCEDURE [Report].[P_Report_Generate_Manual_Order_Commissions]
     (
@@ -82,7 +83,13 @@ BEGIN
                         1
                     );
 
-                IF EXISTS (SELECT * FROM dbo.Order_Commission WHERE Orders_ID = @Order_ID AND Account_ID = 2 AND Commission_Amt <> @CommissionAmount)
+                --NG20240530
+                IF
+                    EXISTS (
+                        SELECT *
+                        FROM dbo.Order_Commission
+                        WHERE Orders_ID = @Order_ID AND Account_ID = 2 AND Commission_Amt <> @CommissionAmount AND Commission_Amt != 0.00
+                    )
                     RAISERROR (
                         'The commission amount entered does not match what is currently already given, please verify these 2 match and try again.',
                         12,
