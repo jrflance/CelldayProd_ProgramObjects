@@ -27,11 +27,12 @@ Originally Created : 2020-09-21
 	   KMH20240415 : Changed merchant invoice date due to be the order's date due instead of invoice date due per Sammer
 Original Procedure : [Report].[P_Reports_TransactionDetails] by MRios
        DMD20240529 : Optimized queries and added indexes with data included for histories.
+       DMD20240606 : Rework SIM Inclusion code to replace ESN References with SIM References
 
 ================================================================================================================
              Usage : EXEC [Report].[P_Reports_MA_TransactionDetails]
 ================================================================================================================*/
-ALTER PROCEDURE [Report].[P_Reports_MA_TransactionDetails]
+CREATE OR ALTER PROCEDURE [Report].[P_Reports_MA_TransactionDetails]
     (@StartDate DATETIME, @EndDate DATETIME, @SessionID INT)
 AS
 
@@ -601,10 +602,10 @@ BEGIN
         --------------------------------------------------------------------------------------------------------------
         -- Order Auth SIM
         -- ----------------------------
-        ; WITH Needs_ESN AS (
+        ; WITH Needs_SIM AS (
             SELECT DISTINCT OrderID
             FROM #Data2
-            WHERE ISNULL(ESN, '') = ''
+            WHERE ISNULL(SIM, '') = ''
         ), AddonFamily AS (
             SELECT DISTINCT AddonID
             FROM dbo.tblAddonFamily
@@ -629,17 +630,17 @@ BEGIN
             EXISTS
             (
                 SELECT 1
-                FROM Needs_ESN AS d3
+                FROM Needs_SIM AS d3
                 WHERE d.OrderID = d3.OrderID
             );
 
         -- ----------------------------
         -- Data2 SIM
         -- ----------------------------
-        ; WITH Needs_ESN AS (
+        ; WITH Needs_SIM AS (
             SELECT DISTINCT OrderID
             FROM #Data2
-            WHERE ISNULL(ESN, '') = ''
+            WHERE ISNULL(SIM, '') = ''
         ), AddonFamily AS (
             SELECT DISTINCT AddonID
             FROM dbo.tblAddonFamily
@@ -663,17 +664,17 @@ BEGIN
             EXISTS
             (
                 SELECT 1
-                FROM Needs_ESN AS d3
+                FROM Needs_SIM AS d3
                 WHERE d.OrderID = d3.OrderID
             );
 
         -- ----------------------------
         -- SIM Kit SIM
         -- ----------------------------
-        ; WITH Needs_ESN AS (
+        ; WITH Needs_SIM AS (
             SELECT DISTINCT OrderID
             FROM #Data2
-            WHERE ISNULL(ESN, '') = ''
+            WHERE ISNULL(SIM, '') = ''
         )
         UPDATE d
         SET d.SIM = ISNULL(dsim.SKU, '')
@@ -687,7 +688,7 @@ BEGIN
             EXISTS
             (
                 SELECT 1
-                FROM Needs_ESN AS d3
+                FROM Needs_SIM AS d3
                 WHERE d.OrderID = d3.OrderID
             );
         --
@@ -1591,3 +1592,4 @@ BEGIN
             , ERROR_MESSAGE() AS ErrorMessage;
     END CATCH;
 END;
+GO
