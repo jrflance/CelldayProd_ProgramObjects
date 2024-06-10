@@ -1592,4 +1592,3 @@ BEGIN
             , ERROR_MESSAGE() AS ErrorMessage;
     END CATCH;
 END;
-GO
