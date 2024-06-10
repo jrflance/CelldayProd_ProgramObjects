@@ -56,6 +56,7 @@
 	--  MR20240215 : Removed join to product carrier mapping table in both options' final select statements.
 					 Add Fee column and Retail Cost column.
  KMH20240403 : Added join for 'SimType' for residuals to stop duplication on OIA
+    -- DMD20240529 : Optimized Queries, added indexes and history portions Added but commented out.
 ==========================================================================================
          Usage : EXEC [Report].[P_Report_MA_Invoice_Commission_Details_WTree_Date] 155536,'20230801','20230802'
 ==========================================================================================*/
@@ -69,12 +70,12 @@ ALTER PROCEDURE [Report].[P_Report_MA_Invoice_Commission_Details_WTree_Date]
 AS
 
 BEGIN TRY
-------testing
-    -- DECLARE
-    -- @StartDate DATE = '2023-03-01' --NULL--DATEADD(MONTH,-1,CONVERT(DATE,GETDATE()))--'20231001'
-    -- , @EndDate DATE = '2024-03-12' --NULL --CONVERT(DATE,GETDATE()) --20231018'
-    -- , @SessionID INT = 155536 --156792 --155536
-    -- , @Option INT = 1;
+    --testing
+    --DECLARE
+    --@StartDate DATE = '2024-05-28' --NULL--DATEADD(MONTH,-1,CONVERT(DATE,GETDATE()))--'20231001'
+    --, @EndDate DATE = '2024-05-29' --NULL --CONVERT(DATE,GETDATE()) --20231018'
+    --, @SessionID INT = 155536 --157974 --157814 --158961
+    --, @Option INT = 0;
     -- NOTE: Victra AccountID = 155536
 
     SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
@@ -210,6 +211,52 @@ BEGIN TRY
                 AND n.DateFilled < @EndDate;
 
 
+            CREATE NONCLUSTERED INDEX idx_ListOfOrders0_OrderID ON #ListOfOrders0 (Orders_ID); -- LUX
+            CREATE NONCLUSTERED INDEX idx_ListOfOrders0_AuthNumber ON #ListOfOrders0 (AuthNumber); -- LUX
+
+            -- HISTORICAL DATA
+            --INSERT INTO #ListOfOrders0
+            --(
+            --    Order_ID,
+            --    Order_No,
+            --    AuthNumber,
+            --    DateFilled,
+            --    OrderType_ID,
+            --    User_ID,
+            --    UserName,
+            --    Account_ID
+            --)
+            --SELECT
+            --    Oi.ID,
+            --    Oi.Order_No,
+            --    CONVERT(BIGINT, n.AuthNumber) AS AuthNumber,
+            --    n.DateFilled,
+            --    n.OrderType_ID,
+            --    n.User_ID, --KMH20230831
+            --    u.UserName, --KMH20230831
+            --    l.AccountID
+            --FROM CellDay_History.dbo.Order_No AS n
+            --JOIN CellDay_History.dbo.Orders AS Oi
+            --    ON n.Order_No = Oi.Order_No
+            --JOIN #ListOfAccounts AS l
+            --    ON l.AccountID = n.Account_ID
+            --JOIN dbo.Users AS u
+            --    ON u.User_ID = n.User_ID
+            --WHERE
+            --	NOT EXISTS
+            --	(
+            --		SELECT 1
+            --		FROM #ListOfOrders0 lo
+            --		WHERE Oi.ID = lo.Order_ID
+            --	)
+            --    AND n.Filled = 1
+            --    AND n.Void = 0
+            --    AND n.Process = 1
+            --    AND n.OrderType_ID NOT IN (12, 5, 6, 43, 44)
+            --    AND n.DateFilled >= @StartDate
+            --    AND n.DateFilled < @EndDat
+
+
 
             --KMH20240301 Find promos where activation filled later
             INSERT INTO #ListOfOrders0
@@ -224,7 +271,7 @@ BEGIN TRY
                 Account_ID
             )
             SELECT DISTINCT
-                opromo.ID AS Orders_ID
+                opromo.ID AS Order_ID
                 , opromo.Order_No
                 , CONVERT(INT, odpromo.AuthNumber) AS AuthNumber
                 , odpromo.DateFilled
@@ -246,6 +293,43 @@ BEGIN TRY
                 AND odpromo.Filled = 1
                 AND odpromo.Void = 0
                 AND NOT EXISTS (SELECT TOP 1 1 FROM #ListOfOrders0 AS lo WHERE lo.Orders_ID = opromo.ID)
+
+            -- history Find promos where activation filled later
+            --INSERT INTO #ListOfOrders0
+            --(
+            --    Order_ID,
+            --    Order_No,
+            --    AuthNumber,
+            --    DateFilled,
+            --    OrderType_ID,
+            --    User_ID,
+            --    UserName,
+            --    Account_ID
+            --)
+            --SELECT DISTINCT
+            --    opromo.ID AS Order_ID
+            --    , opromo.Order_No
+            --    , CONVERT(INT, odpromo.AuthNumber) AS AuthNumber
+            --    , odpromo.DateFilled
+            --    , odpromo.OrderType_ID
+            --    , odpromo.User_ID
+            --    , u.UserName
+            --    , odpromo.Account_ID
+            --FROM #ListOfOrders0 AS lo
+            --JOIN CellDay_History.dbo.Order_No AS odpromo
+            --    ON odpromo.AuthNumber = CONVERT(VARCHAR(30), lo.Order_No)
+            --JOIN CellDay_History.dbo.Orders AS opromo
+            --    ON opromo.Order_No = odpromo.Order_No
+            --JOIN dbo.Users AS u
+            --    ON u.User_ID = odpromo.User_ID
+            --WHERE
+            --    lo.OrderType_ID IN (22, 23)
+            --    AND odpromo.OrderType_ID IN (59, 60)
+            --    AND odpromo.Process = 1
+            --    AND odpromo.Filled = 1
+            --    AND odpromo.Void = 0
+            --    AND NOT EXISTS (SELECT TOP 1 1 FROM #ListOfOrders0 AS lo WHERE lo.Order_ID = opromo.ID)
+
 
             --KMH20240301 Remove promos where activation hasnt been filled
             ; WITH CTEPendingAct AS (
@@ -363,39 +447,85 @@ BEGIN TRY
             --  Find order based on AuthNumber
             ------------------------------------------------------------------------------------------------------------
             DROP TABLE IF EXISTS #PreOrderAuth;
-
+            ; WITH src AS (
+                SELECT
+                    o.Orders_ID,
+                    o.Order_No,
+                    o.AuthNumber,
+                    o.OrderType_ID,
+                    d.SKU
+                FROM #ListOfOrders0 AS o
+                JOIN dbo.Orders AS d
+                    ON d.ID = o.Orders_ID
+                WHERE ISNULL(o.AuthNumber, '') <> ''
+                --UNION -- HISTORY
+                --SELECT
+                --	o.Order_ID,
+                --	o.Order_No,
+                --	o.AuthNumber,
+                --	o.OrderType_ID,
+                --	d.SKU
+                --FROM #ListOfOrders0 AS o
+                --JOIN CellDay_History.dbo.Orders AS d
+                --	ON d.ID = o.Order_ID
+                --WHERE ISNULL(o.AuthNumber, '') <>
+            )
             SELECT
-                o.Orders_ID,
-                o.Order_No,
-                o.AuthNumber,
-                o.OrderType_ID,
-                d.SKU
+                src.Orders_ID,
+                src.Order_No,
+                src.AuthNumber,
+                src.OrderType_ID,
+                src.SKU
             INTO #PreOrderAuth
-            FROM #ListOfOrders0 AS o
-            JOIN dbo.Orders AS d
-                ON d.ID = o.Orders_ID
-            WHERE ISNULL(o.AuthNumber, '') <> '';
+            FROM src
+            ;
 
             DROP TABLE IF EXISTS #OrderAuth;
 
+            ; WITH src AS (
+                SELECT
+                    d2.ID AS AuthOrderID,
+                    d2.Order_No,
+                    ord.Orders_ID AS OrgOrderId
+                FROM dbo.Orders AS d2
+                JOIN #PreOrderAuth AS ord
+                    ON
+                        d2.Order_No = ord.AuthNumber
+                        AND d2.SKU = ord.SKU
+                        AND ISNULL(d2.ParentItemID, 0) IN (0, 1)
+                        AND ISNULL(ord.AuthNumber, '') <> '' --MR20231108
+                JOIN dbo.Order_No AS n
+                    ON
+                        n.Order_No = ord.Order_No
+                        AND n.Filled = 1 --MR20231108
+                        AND n.Void = 0
+                        AND n.Process = 1
+            --UNION -- History
+            --SELECT
+            --	d2.ID AS AuthOrderID,
+            --	d2.Order_No,
+            --	ord.Order_ID AS OrgOrderId
+            --FROM CellDay_History.dbo.Orders AS d2
+            --JOIN #PreOrderAuth AS ord
+            --	ON
+            --		d2.Order_No = ord.AuthNumber
+            --		AND d2.SKU = ord.SKU
+            --		AND ISNULL(d2.ParentItemID, 0) IN (0, 1)
+            --		AND ISNULL(ord.AuthNumber, '') <> '' --MR20231108
+            --JOIN CellDay_History.dbo.Order_No AS n
+            --	ON
+            --		n.Order_No = ord.Order_No
+            --		AND n.Filled = 1 --MR20231108
+            --		AND n.Void = 0
+            --		AND n.Process =
+            )
             SELECT
-                d2.ID AS AuthOrderID,
-                d2.Order_No,
-                ord.Orders_ID AS OrgOrderId
+                src.AuthOrderID,
+                src.Order_No,
+                src.OrgOrderId
             INTO #OrderAuth
-            FROM dbo.Orders AS d2
-            JOIN #PreOrderAuth AS ord
-                ON
-                    d2.Order_No = ord.AuthNumber
-                    AND d2.SKU = ord.SKU
-                    AND ISNULL(d2.ParentItemID, 0) IN (0, 1)
-                    AND ISNULL(ord.AuthNumber, '') <> '' --MR20231108
-            JOIN dbo.Order_No AS n
-                ON
-                    n.Order_No = ord.Order_No
-                    AND n.Filled = 1 --MR20231108
-                    AND n.Void = 0
-                    AND n.Process = 1;
+            FROM src
+            ;
 
             --   --------------------------------------------------------------------------------------------------------------
             --   -- Get data tblOrderItemAddons based on orders
@@ -403,134 +533,198 @@ BEGIN TRY
 
             DROP TABLE IF EXISTS #OiA;
 
+            ; WITH src AS (
+                SELECT DISTINCT --MR20231108 (Added distinct)
+                    A.OrderID,
+                    A.AddonsValue,
+                    f2.AddonTypeName
+                FROM #ListOfOrders0 AS B
+                JOIN dbo.tblOrderItemAddons AS A
+                    ON B.Orders_ID = A.OrderID
+                JOIN dbo.tblAddonFamily AS f2
+                    ON
+                        f2.AddonID = A.AddonsID
+                        AND f2.AddonTypeName IN ('SimType', 'SimBYOPType', 'DeviceType', 'DeviceBYOPType')
+            --UNION -- HISTORY
+            --SELECT DISTINCT --MR20231108 (Added distinct)
+            --	A.OrderID,
+            --	A.AddonsValue,
+            --	f2.AddonTypeName
+            --FROM #ListOfOrders0 AS B
+            --JOIN CellDay_History.dbo.tblOrderItemAddons AS A
+            --	ON B.Order_ID = A.OrderID
+            --JOIN dbo.tblAddonFamily AS f2
+            --	ON
+            --		f2.AddonID = A.AddonsID
+            --		AND f2.AddonTypeName IN ('SimType', 'SimBYOPType', 'DeviceType', 'DeviceBYOPType')
+            )
             SELECT DISTINCT --MR20231108 (Added distinct)
-                A.OrderID,
-                A.AddonsValue,
-                f2.AddonTypeName
+                src.OrderID,
+                src.AddonsValue,
+                src.AddonTypeName
             INTO #OiA
-            FROM #ListOfOrders0 AS B
-            JOIN dbo.tblOrderItemAddons AS A
-                ON B.Orders_ID = A.OrderID
-            JOIN dbo.tblAddonFamily AS f2
-                ON
-                    f2.AddonID = A.AddonsID
-                    AND f2.AddonTypeName IN ('SimType', 'SimBYOPType', 'DeviceType', 'DeviceBYOPType');
+            FROM src
+            ;
 
             --   --------------------------------------------------------------------------------------------------------------
             --   -- Get data tblOrderItemAddons based on AuthNumber
             --   --------------------------------------------------------------------------------------------------------------
             DROP TABLE IF EXISTS #OIAAuth;
 
+            ; WITH src AS (
+                SELECT DISTINCT --MR20231108 (Added distinct)
+                    A.OrderID,
+                    A.AddonsValue,
+                    B.Order_No,
+                    f2.AddonTypeName
+                FROM #OrderAuth AS B
+                JOIN dbo.tblOrderItemAddons AS A
+                    ON B.AuthOrderID = A.OrderID
+                JOIN dbo.tblAddonFamily AS f2
+                    ON
+                        f2.AddonID = A.AddonsID
+                        AND f2.AddonTypeName IN ('SimType', 'SimBYOPType', 'DeviceType', 'DeviceBYOPType')
+            --UNION -- HISTORY
+            --SELECT DISTINCT --MR20231108 (Added distinct)
+            --	A.OrderID,
+            --	A.AddonsValue,
+            --	B.Order_No,
+            --	f2.AddonTypeName
+            --FROM #OrderAuth AS B
+            --JOIN CellDay_History.dbo.tblOrderItemAddons AS A
+            --	ON B.AuthOrderID = A.OrderID
+            --JOIN dbo.tblAddonFamily AS f2
+            --	ON
+            --		f2.AddonID = A.AddonsID
+            --		AND f2.AddonTypeName IN ('SimType', 'SimBYOPType', 'DeviceType', 'DeviceBYOPType')
+            )
             SELECT DISTINCT --MR20231108 (Added distinct)
-                A.OrderID,
-                A.AddonsValue,
-                B.Order_No,
-                f2.AddonTypeName
+                src.OrderID,
+                src.AddonsValue,
+                src.Order_No,
+                src.AddonTypeName
             INTO #OIAAuth
-            FROM #OrderAuth AS B
-            JOIN dbo.tblOrderItemAddons AS A
-                ON B.AuthOrderID = A.OrderID
-            JOIN dbo.tblAddonFamily AS f2
-                ON
-                    f2.AddonID = A.AddonsID
-                    AND f2.AddonTypeName IN ('SimType', 'SimBYOPType', 'DeviceType', 'DeviceBYOPType');
+            FROM src
+            ;
 
             DROP TABLE IF EXISTS #Residual; --KMH20240301
-            SELECT DISTINCT
-                d.Orders_ID
-                , d.Order_No
-                , oiar.AddonsValue AS [SIM]
-                , CASE
-                    WHEN dcd.esn IS NOT NULL THEN dcd.ESN
-                    WHEN
-                        LEN(oia.AddonsValue) BETWEEN 15 AND 16
-                        AND ISNUMERIC(oia.AddonsValue) = 1
-                        THEN oia.AddonsValue
-                    ELSE ''
-                END AS [ESN]
-            INTO #Residual
-            FROM #ListOfOrders0 AS d
-            JOIN dbo.tblOrderItemAddons AS oiar
-                ON oiar.OrderID = d.Orders_ID
-            JOIN
-                dbo.tblOrderItemAddons AS oias
-                    JOIN dbo.tblAddonFamily AS aofs
-                        ON
-                            aofs.AddonID = oias.AddonsID
-                            AND aofs.AddonTypeName IN ('SimType', 'SimBYOPType')
-                ON oias.AddonsValue = oiar.AddonsValue
-            JOIN
-                dbo.tblOrderItemAddons AS oia
-                    LEFT JOIN dbo.tblAddonFamily AS aof
-                        ON
-                            aof.AddonID = oia.AddonsID
-                            AND aof.AddonTypeName IN ('DeviceType', 'DeviceBYOPType')
-                ON oias.OrderID = oia.OrderID
-            LEFT JOIN Tracfone.tblDealerCommissionDetail AS dcd
-                ON
-                    dcd.SIM = oiar.AddonsValue
-                    AND dcd.COMMISSION_TYPE IN ('AUTOPAY ENROLLMENT', 'AUTOPAY RESIDUAL')
-            LEFT JOIN
-                dbo.Orders AS o
-                    JOIN dbo.Order_No AS od
-                        ON
-                            od.Order_No = o.Order_No
-                            AND od.OrderType_ID IN (22, 23)
-                ON
-                    oia.OrderID = o.ID
-                    AND ISNULL(o.ParentItemID, 0) = 0
-            WHERE d.OrderType_ID IN (28, 38)
-
+            ; WITH src AS (
+                SELECT DISTINCT
+                    d.Orders_ID
+                    , d.Order_No
+                    , oiar.AddonsValue AS [SIM]
+                    , CASE
+                        WHEN dcd.esn IS NOT NULL THEN dcd.ESN
+                        WHEN
+                            LEN(oia.AddonsValue) BETWEEN 15 AND 16
+                            AND ISNUMERIC(oia.AddonsValue) = 1
+                            THEN oia.AddonsValue
+                        ELSE ''
+                    END AS [ESN]
+                FROM #ListOfOrders0 AS d
+                JOIN dbo.tblOrderItemAddons AS oiar
+                    ON oiar.OrderID = d.Orders_ID
+                JOIN
+                    dbo.tblOrderItemAddons AS oias
+                        JOIN dbo.tblAddonFamily AS aofs
+                            ON
+                                aofs.AddonID = oias.AddonsID
+                                AND aofs.AddonTypeName IN ('SimType', 'SimBYOPType')
+                    ON oias.AddonsValue = oiar.AddonsValue
+                JOIN
+                    dbo.tblOrderItemAddons AS oia
+                        LEFT JOIN dbo.tblAddonFamily AS aof
+                            ON
+                                aof.AddonID = oia.AddonsID
+                                AND aof.AddonTypeName IN ('DeviceType', 'DeviceBYOPType')
+                    ON oias.OrderID = oia.OrderID
+                LEFT JOIN Tracfone.tblDealerCommissionDetail AS dcd
+                    ON
+                        dcd.SIM = oiar.AddonsValue
+                        AND dcd.COMMISSION_TYPE IN ('AUTOPAY ENROLLMENT', 'AUTOPAY RESIDUAL')
+                LEFT JOIN
+                    dbo.Orders AS o
+                        JOIN dbo.Order_No AS od
+                            ON
+                                od.Order_No = o.Order_No
+                                AND od.OrderType_ID IN (22, 23)
+                    ON
+                        oia.OrderID = o.ID
+                        AND ISNULL(o.ParentItemID, 0) = 0
+                WHERE d.OrderType_ID IN (28, 38)
+            --UNION
             ----For historical runs as dcd only keeps few weeks of data
-            -- INSERT INTO #Residual
             -- SELECT DISTINCT
-            -- d.Orders_ID
-            -- , d.Order_No
-            -- , oiar.AddonsValue AS [SIM]
-            -- , CASE
-            -- WHEN dcd.esn IS NOT NULL THEN dcd.ESN
-            -- WHEN
-            -- LEN(oia.AddonsValue) BETWEEN 15 AND 16
-            -- AND ISNUMERIC(oia.AddonsValue) = 1
-            -- THEN oia.AddonsValue
-            -- ELSE ''
-            -- END AS [ESN]
+            --	 d.Order_ID
+            --	 , d.Order_No
+            --	 , oiar.AddonsValue AS [SIM]
+            --	 , CASE
+            --		 WHEN dcd.esn IS NOT NULL THEN dcd.ESN
+            --		 WHEN
+            --			 LEN(oia.AddonsValue) BETWEEN 15 AND 16
+            --			 AND ISNUMERIC(oia.AddonsValue) = 1
+            --			 THEN oia.AddonsValue
+            --		 ELSE ''
+            --		 END AS [ESN]
             -- FROM #ListOfOrders0 AS d
-            -- JOIN dbo.tblOrderItemAddons AS oiar
-            -- ON oiar.OrderID = d.Orders_ID
-            -- JOIN dbo.tblOrderItemAddons AS oias
+            -- JOIN dbo.tblOrderItemAddons AS oiar ON oiar.OrderID = d.Order_ID
+            -- JOIN dbo.tblOrderItemAddons AS oias ON oias.AddonsValue = oiar.AddonsValue
             -- JOIN dbo.tblAddonFamily AS aofs
-            -- ON
-            -- aofs.AddonID = oias.AddonsID
-            -- AND aofs.AddonTypeName IN ('SimType', 'SimBYOPType')
-            -- ON oias.AddonsValue = oiar.AddonsValue
-            -- JOIN
-            -- dbo.tblOrderItemAddons AS oia
+            --	 ON
+            --	 aofs.AddonID = oias.AddonsID
+            --	 AND aofs.AddonTypeName IN ('SimType', 'SimBYOPType')
+            -- JOIN dbo.tblOrderItemAddons AS oia ON oias.OrderID = oia.OrderID
             -- LEFT JOIN dbo.tblAddonFamily AS aof
-            -- ON
-            -- aof.AddonID = oia.AddonsID
-            -- AND aof.AddonTypeName IN ('DeviceType', 'DeviceBYOPType')
-            -- ON oias.OrderID = oia.OrderID
+            --	 ON
+            --	 aof.AddonID = oia.AddonsID
+            --	 AND aof.AddonTypeName IN ('DeviceType', 'DeviceBYOPType')
             -- LEFT JOIN CellDay_History.Tracfone.tblDealerCommissionDetail AS dcd
-            -- ON
-            -- dcd.SIM = oiar.AddonsValue
-            -- AND dcd.COMMISSION_TYPE IN ('AUTOPAY ENROLLMENT', 'AUTOPAY RESIDUAL')
-            -- LEFT JOIN
-            -- dbo.Orders AS o
-            -- JOIN dbo.Order_No AS od
-            -- ON
-            -- od.Order_No = o.Order_No
-            -- AND od.OrderType_ID IN (22, 23)
-            -- ON
-            -- oia.OrderID = o.ID
-            -- AND ISNULL(o.ParentItemID, 0) = 0
+            --	 ON
+            --	 dcd.SIM = oiar.AddonsValue
+            --	 AND dcd.COMMISSION_TYPE IN ('AUTOPAY ENROLLMENT', 'AUTOPAY RESIDUAL')
+            -- LEFT JOIN CellDay_History.dbo.Orders AS o
+            --	 ON
+            --	 oia.OrderID = o.ID
+            --	 AND ISNULL(o.ParentItemID, 0) = 0
+            -- JOIN CellDay_History.dbo.Order_No AS od
+            --	 ON
+            --	 od.Order_No = o.Order_No
+            --	 AND od.OrderType_ID IN (22, 23)
             -- WHERE d.OrderType_ID IN (28, 38)
-            --
+            )
+
+            SELECT DISTINCT
+                src.Orders_ID
+                , src.Order_No
+                , src.[SIM]
+                , src.[ESN]
+            INTO #Residual
+            FROM src
+            ;
+
+            -- -------------------------------
+            -- REMOVE DUPLICATE ESN VALUES
+            -- -------------------------------
+            DELETE c
+            FROM
+                (
+                    SELECT
+                        Orders_ID
+                        , Order_No
+                        , SIM
+                        , ESN
+                        , ROW_NUMBER() OVER (PARTITION BY Orders_ID ORDER BY ESN DESC) AS RowNum
+                    FROM #Residual
+                ) AS c
+            WHERE c.RowNum <> 1;
+
 
             IF OBJECT_ID('tempdb..#ListOfCommInfo0') IS NOT NULL
                 BEGIN
                     DROP TABLE #ListOfCommInfo0;
                 END;
+
+            DROP TABLE IF EXISTS #cteListOfCommissions;
 
             ; WITH cteListOfCommissions AS (
                 SELECT --MR20220325
@@ -551,7 +745,31 @@ BEGIN TRY
                     (
                         SELECT 1 FROM #ListOfOrders0 AS lo WHERE lo.Orders_ID = oc.Orders_ID
                     )
+            --UNION -- HISTORICAL
+            --SELECT --MR20220325
+            --    oc.Orders_ID,
+            --    oc.Account_ID,
+            --    oc.Commission_Amt,
+            --    oc.InvoiceNum,
+            --    oc.Datedue,
+            --    la.AccountName, --BS20231106
+            --    CONCAT(oc.Orders_ID, oc.Order_Commission_SK) AS UniqueID --KMH20240301
+            --FROM CellDay_History.dbo.Order_Commission AS oc
+            --JOIN #ListOfAccounts AS la
+            --    ON la.AccountID = oc.Account_ID
+            --WHERE
+            --    oc.Account_ID <> 2
+            --    AND oc.Commission_Amt <> 0
+            --    AND EXISTS
+            --    (
+            --        SELECT 1 FROM #ListOfOrders0 AS lo WHERE lo.Order_ID = oc.Orders_ID
+            --    )
             )
+            SELECT *
+            INTO #cteListOfCommissions
+            FROM cteListOfCommissions;
+            CREATE INDEX idx_cteListOfCommissions_InvoiceNum_AccountID ON #cteListOfCommissions (InvoiceNum, Account_ID, Orders_ID)
+
             SELECT
                 lc.Orders_ID
                 , lc.Account_ID
@@ -563,7 +781,7 @@ BEGIN TRY
                 , CONVERT(DATETIME, n.DateDue) AS [MADateDue]
                 , lc.UniqueID
             INTO #ListOfCommInfo0
-            FROM cteListOfCommissions AS lc
+            FROM #cteListOfCommissions AS lc
             LEFT JOIN dbo.Order_No AS n
                 ON
                     lc.InvoiceNum = n.InvoiceNum
@@ -579,6 +797,37 @@ BEGIN TRY
                 lc.Datedue,
                 lc.AccountName,
                 lc.UniqueID;
+
+            -- HISTORICAL
+            --INSERT INTO #ListOfCommInfo0(
+            --    Orders_ID,Account_ID,InvoiceNum,Datedue,AccountName,Commission_Amt,[MaInvoiceNumber],[MADateDue],lc.UniqueID)
+            --SELECT
+            --	lc.Orders_ID
+            --	, lc.Account_ID
+            --	, lc.InvoiceNum		--MR20231129
+            --	, lc.Datedue
+            --	, lc.AccountName --BS20231106
+            --	, SUM(lc.Commission_Amt) AS Commission_Amt
+            --	, CONVERT(VARCHAR(MAX), n.Order_No) AS [MaInvoiceNumber]
+            --	, CONVERT(DATETIME, n.DateDue) AS [MADateDue]
+            --	, lc.UniqueID
+            --FROM #cteListOfCommissions AS lc
+            --LEFT JOIN CellDay_History.dbo.Order_No AS n
+            --	ON
+            --		lc.InvoiceNum = n.InvoiceNum
+            --		AND lc.InvoiceNum IS NOT NULL
+            --		AND n.Account_ID = lc.Account_ID
+            --		AND n.OrderType_ID IN (5, 6)
+            --GROUP BY
+            --	CONVERT(VARCHAR(MAX), n.Order_No),
+            --	n.DateDue,
+            --	lc.Orders_ID,
+            --	lc.Account_ID,
+            --	lc.InvoiceNum,
+            --	lc.Datedue,
+            --	lc.AccountName,
+            --	lc.UniqueID	;
+
 
             INSERT INTO #ListOfCommInfo0 --KMH20240301
             (
@@ -621,6 +870,32 @@ BEGIN TRY
                 BEGIN
                     DROP TABLE #ProductCategory0;
                 END;
+
+            ; WITH Orders AS (
+                SELECT
+                    o.ID,
+                    o.Price,
+                    o.DiscAmount,
+                    ISNULL(o.Fee, 0.00) AS Fee,
+                    o.Product_ID AS [Product SKU], --KMH20230831
+                    o.Name,
+                    o.Product_ID
+                FROM #ListOfOrders0 AS lo
+                JOIN dbo.Orders AS o
+                    ON o.ID = lo.Orders_ID
+            --UNION -- HISTORICAL
+            --SELECT
+            --  o.ID,
+            --  o.Price,
+            --  o.DiscAmount,
+            --  ISNULL(o.Fee, 0.00) AS Fee,
+            --  o.Product_ID AS [Product SKU], --KMH20230831
+            --  o.Name,
+            --  o.Product_ID
+            --FROM #ListOfOrders0 AS lo
+            --JOIN CellDay_History.dbo.Orders AS o
+            --  ON o.ID = lo.Order_ID
+            )
 
             SELECT
                 lo.Orders_ID,
@@ -713,7 +988,7 @@ BEGIN TRY
                 o.Product_ID AS [Product SKU] --KMH20230831
             INTO #ProductCategory0
             FROM #ListOfOrders0 AS lo
-            JOIN dbo.Orders AS o
+            JOIN Orders AS o
                 ON o.ID = lo.Orders_ID
             JOIN dbo.Products AS p
                 ON p.Product_ID = o.Product_ID
@@ -749,8 +1024,30 @@ BEGIN TRY
             JOIN #MAXtspTransactionFeed AS tf
                 ON f.TSPTransactionFeedID = tf.FeedID;
 
-            WITH MyCte AS (
+            ; WITH Order_No AS (
                 SELECT
+                    n.Order_No,
+                    n.Account_ID,
+                    n.DateOrdered,
+                    n.DateFilled,
+                    n.Customer_ID,
+                    n.User_ID
+                FROM #ListOfOrders0 AS lo
+                JOIN dbo.Order_No AS n
+                    ON n.Order_No = lo.Order_No
+            --UNION
+            --SELECT
+            --    n.Order_No,
+            --    n.Account_ID,
+            --    n.DateOrdered,
+            --    n.DateFilled,
+            --    n.Customer_ID,
+            --    n.User_ID
+            --FROM #ListOfOrders0 AS lo
+            --JOIN CellDay_History.dbo.Order_No AS n
+            --    ON n.Order_No = lo.Order_No
+            ), MyCte AS (
+                SELECT DISTINCT
                     n.Order_No,
                     pc1.Name AS [Product],
                     pc1.Product_ID,
@@ -776,7 +1073,7 @@ BEGIN TRY
                     u.UserName AS [username],                                                                 --KMH20230831
                     lci.UniqueID --KMH20240221
                 FROM #ListOfOrders0 AS lo
-                JOIN dbo.Order_No AS n
+                JOIN Order_No AS n
                     ON n.Order_No = lo.Order_No
                 JOIN #ProductCategory0 AS pc1
                     ON pc1.Orders_ID = lo.Orders_ID
@@ -825,10 +1122,10 @@ BEGIN TRY
 
             SELECT
                 m.Order_No,
-                m.DateFilled,                               --KMH20230831
-                m.Product,
+                DateFilled = CONVERT(VARCHAR(10), m.DateFilled, 120),                            --KMH20230831
+                Product = REPLACE(m.Product, ',', ''),
                 m.ProductTypeName,
-                CASE
+                ISNULL(CASE
                     WHEN m.ProductTypeName = 'Activation'
                         THEN
                             C2.Name --NG20210426
@@ -837,7 +1134,7 @@ BEGIN TRY
                             'Merchant Service Commission'
                     ELSE
                         C.Name
-                END AS [ProductCategory],
+                END, '') AS [ProductCategory],
                 CASE
                     WHEN m.ProductTypeName = 'Activation'
                         THEN
@@ -850,20 +1147,20 @@ BEGIN TRY
                 m.Fee,
                 (m.Price - m.DiscAmount + m.Fee) AS RetailCost, --MR20240215
                 m.Account_ID,
-                m.DateOrdered,
+                CONVERT(VARCHAR(10), m.DateOrdered, 120) AS DateOrdered,
                 CONVERT(VARCHAR(20), m.[MaCommissionAmount]) AS [MaCommissionAmount],
-                m.DateDue AS DirectParentCommissionDateDue, --KMH20230831			--KMH20230831
+                CONVERT(VARCHAR(10), m.DateDue, 120) AS DirectParentCommissionDateDue, --KMH20230831			--KMH20230831
                 m.[MaInvoiceNumber],
-                m.SIM,                                      --KMH20230831
-                m.ESN,                                      --KMH20230831
-                m.PONumber,                                 --KMH20230831
-                m.[Product SKU],                            --KMH20230831
-                m.Company,                                  --KMH20230831
+                CONVERT(VARCHAR(25), m.SIM) AS SIM,                       --KMH20230831
+                CONVERT(VARCHAR(25), m.ESN) AS ESN,                       --KMH20230831
+                PONumber = ISNULL(CONVERT(VARCHAR(20), m.PONumber), ''),                                 --KMH20230831
+                [Product SKU] = REPLACE(m.[Product SKU], ',', ''),                            --KMH20230831
+                Company = REPLACE(m.Company, ',', ''),                                  --KMH20230831
                 m.UserID,                                   --KMH20230831
                 m.username,                                 --KMH20230831
                 m.[MA],
-                m.MA_AccountName,
-                m.UniqueID
+                MA_AccountName = REPLACE(m.MA_AccountName, ',', ''),
+                CONVERT(NVARCHAR(25), m.UniqueID) AS UniqueID
             FROM MyCte AS m
             LEFT JOIN dbo.Product_Category AS PC WITH (READUNCOMMITTED)
                 ON m.Product_ID = PC.Product_ID
@@ -898,6 +1195,55 @@ BEGIN TRY
                 Account_ID INT --KMH20240221
             );
 
+            ; WITH src AS (
+                SELECT
+                    Oi.ID,
+                    Oi.Order_No,
+                    --, CONVERT( INT, AuthNumber ) AuthNumber
+                    n.DateFilled,
+                    n.OrderType_ID,
+                    n.User_ID, --KMH20230831
+                    u.UserName, --KMH20230831
+                    l.AccountID
+                FROM dbo.Order_No AS n
+                JOIN dbo.Orders AS Oi
+                    ON n.Order_No = Oi.Order_No
+                JOIN #ListOfAccounts AS l
+                    ON l.AccountID = n.Account_ID
+                JOIN dbo.Users AS u
+                    ON u.User_ID = n.User_ID
+                WHERE
+                    n.Filled = 1
+                    AND n.Void = 0
+                    AND n.Process = 1
+                    AND n.OrderType_ID NOT IN (12, 5, 6, 43, 44)
+                    AND n.DateFilled >= @StartDate
+                    AND n.DateFilled < @EndDate
+            --UNION -- HISTORY
+            --SELECT
+            --    Oi.ID,
+            --    Oi.Order_No,
+            --    --, CONVERT( INT, AuthNumber ) AuthNumber
+            --    n.DateFilled,
+            --    n.OrderType_ID,
+            --    n.User_ID, --KMH20230831
+            --    u.UserName, --KMH20230831
+            --    l.AccountID
+            --FROM CellDay_History.dbo.Order_No AS n
+            --JOIN CellDay_History.dbo.Orders AS Oi
+            --    ON n.Order_No = Oi.Order_No
+            --JOIN #ListOfAccounts AS l
+            --    ON l.AccountID = n.Account_ID
+            --JOIN dbo.Users AS u
+            --    ON u.User_ID = n.User_ID
+            --WHERE
+            --    n.Filled = 1
+            --    AND n.Void = 0
+            --    AND n.Process = 1
+            --    AND n.OrderType_ID NOT IN (12, 5, 6, 43, 44)
+            --    AND n.DateFilled >= @StartDate
+            --    AND n.DateFilled < @EndDate
+            )
             INSERT INTO #ListOfOrders1
             (
                 Orders_ID,
@@ -909,28 +1255,16 @@ BEGIN TRY
                 Account_ID
             )
             SELECT
-                Oi.ID,
-                Oi.Order_No,
-                --, CONVERT( INT, AuthNumber ) AuthNumber
-                n.DateFilled,
-                n.OrderType_ID,
-                n.User_ID, --KMH20230831
-                u.UserName, --KMH20230831
-                l.AccountID
-            FROM dbo.Order_No AS n
-            JOIN dbo.Orders AS Oi
-                ON n.Order_No = Oi.Order_No
-            JOIN #ListOfAccounts AS l
-                ON l.AccountID = n.Account_ID
-            JOIN dbo.Users AS u
-                ON u.User_ID = n.User_ID
-            WHERE
-                n.Filled = 1
-                AND n.Void = 0
-                AND n.Process = 1
-                AND n.OrderType_ID NOT IN (12, 5, 6, 43, 44)
-                AND n.DateFilled >= @StartDate
-                AND n.DateFilled < @EndDate;
+                ID,
+                Order_No, --AuthNumber,
+                DateFilled,
+                OrderType_ID,
+                User_ID,
+                UserName,
+                AccountID
+            FROM
+                src
+            ;
             --Select * from #ListOfOrders1
 
 
@@ -984,7 +1318,7 @@ BEGIN TRY
                     DROP TABLE #ListOfCommInfo1;
                 END;
 
-
+            DROP TABLE IF EXISTS #cteListOfCommissions_option1;
             ; WITH cteListOfCommissions AS (
                 SELECT --MR20220325
                     oc.Orders_ID,
@@ -1005,7 +1339,31 @@ BEGIN TRY
                     (
                         SELECT 1 FROM #ListOfOrders1 AS lo WHERE lo.Orders_ID = oc.Orders_ID
                     )
+            --  UNION
+            --  SELECT --MR20220325
+            --      oc.Orders_ID,
+            --      oc.Account_ID,
+            --      oc.Commission_Amt,
+            --      oc.InvoiceNum,
+            --      oc.Datedue,
+            --      la.AccountName,
+            --      CONCAT(oc.Orders_ID, oc.Order_Commission_SK) AS UniqueID --KMH20240301
+            --  FROM CellDay_History.dbo.Order_Commission AS oc
+            --  JOIN #ListOfAccounts AS la
+            --      ON
+            --          la.AccountID = oc.Account_ID
+            --          AND la.AccountID = @sessionID
+            --  WHERE
+            --      oc.Account_ID <> 2
+            --      AND EXISTS
+            --      (
+            --          SELECT 1 FROM #ListOfOrders1 AS lo WHERE lo.Order_ID = oc.Orders_ID
+            --      )
             )
+            SELECT *
+            INTO #cteListOfCommissions_option1
+            FROM cteListOfCommissions
+
             SELECT
                 lc.Orders_ID
                 , lc.Account_ID
@@ -1017,7 +1375,7 @@ BEGIN TRY
                 , lc.AccountName
                 , lc.UniqueID
             INTO #ListOfCommInfo1
-            FROM cteListOfCommissions AS lc
+            FROM #cteListOfCommissions_option1 AS lc
             LEFT JOIN dbo.Order_No AS n
                 ON
                     lc.InvoiceNum = n.InvoiceNum
@@ -1033,6 +1391,23 @@ BEGIN TRY
                 lc.Datedue,
                 lc.AccountName,
                 lc.UniqueID;
+            CREATE INDEX ix_ListOfCommInfo1 ON #ListOfCommInfo1 (Orders_ID, Account_ID);
+
+            --UPDATE a
+            --SET InvoiceNum = CONVERT(VARCHAR(MAX), n.Order_No)
+            --	,DateDue = CONVERT(DATETIME, n.DateDue)
+            --FROM #ListOfCommInfo1 a
+            --INNER JOIN #cteListOfCommissions_option1 AS lc
+            --	ON a.Orders_ID = lc.Orders_ID
+            --	AND a.Account_ID = lc.Account_ID
+            --LEFT JOIN CellDay_History.dbo.Order_No AS n
+            --     ON
+            --         lc.InvoiceNum = n.InvoiceNum
+            --         AND lc.InvoiceNum IS NOT NULL
+            --         AND n.Account_ID = lc.Account_ID
+            --         AND n.OrderType_ID IN (5, 6)
+            --WHERE a.InvoiceNum IS NULL
+
 
             INSERT INTO #ListOfCommInfo1 --KMH20240301
             (
@@ -1076,6 +1451,32 @@ BEGIN TRY
                     DROP TABLE #ProductCategory1;
                 END;
 
+
+            ; WITH Orders AS (
+                SELECT
+                    o.ID,
+                    o.Price,
+                    o.DiscAmount,
+                    ISNULL(o.Fee, 0.00) AS Fee,
+                    o.Product_ID AS [Product SKU], --KMH20230831
+                    o.Name,
+                    o.Product_ID
+                FROM #ListOfOrders1 AS lo
+                JOIN dbo.Orders AS o
+                    ON o.ID = lo.Orders_ID
+            --	UNION
+            --	SELECT
+            --		o.ID,
+            --		o.Price,
+            --		o.DiscAmount,
+            --		ISNULL(o.Fee, 0.00) AS Fee,
+            --		o.Product_ID AS [Product SKU], --KMH20230831
+            --		o.Name,
+            --		o.Product_ID
+            --	FROM #ListOfOrders1 AS lo
+            --	JOIN CellDay_History.dbo.Orders AS o
+            --		ON o.ID = lo.Order_ID
+            )
             SELECT
                 lo.Orders_ID,
                 o.Name,
@@ -1167,7 +1568,7 @@ BEGIN TRY
                 o.Product_ID AS [Product SKU] --KMH20230831
             INTO #ProductCategory1
             FROM #ListOfOrders1 AS lo
-            JOIN dbo.Orders AS o
+            JOIN Orders AS o
                 ON o.ID = lo.Orders_ID
             JOIN dbo.Products AS p
                 ON p.Product_ID = o.Product_ID
@@ -1180,7 +1581,29 @@ BEGIN TRY
                     pa.Product_ID = p.Product_ID
                     AND pa.AttributeID = 13;
 
-            WITH MyCte AS (
+            ; WITH Order_No AS (
+                SELECT
+                    n.Order_No,
+                    n.Account_ID,
+                    n.DateOrdered,
+                    n.DateFilled,
+                    n.Customer_ID,
+                    n.User_ID
+                FROM #ListOfOrders1 AS lo
+                JOIN dbo.Order_No AS n
+                    ON n.Order_No = lo.Order_No
+            --	UNION
+            --	SELECT
+            --		n.Order_No,
+            --	    n.Account_ID,
+            --	    n.DateOrdered,
+            --	    n.DateFilled,
+            --		n.Customer_ID,
+            --	    n.User_ID
+            --	FROM #ListOfOrders1 AS lo
+            --	JOIN CellDay_History.dbo.Order_No AS n
+            --		ON n.Order_No = lo.Order_No
+            ), MyCte AS (
                 SELECT
                     n.Order_No,
                     pc1.Name AS [Product],
@@ -1203,7 +1626,7 @@ BEGIN TRY
                     u.UserName AS [Username],             --KMH20230831
                     IIF(lci.UniqueID IS NULL, CONCAT(lo.Orders_ID, act.ParentAccounts), lci.UniqueID) AS UniqueID --KMH20240221
                 FROM #ListOfOrders1 AS lo
-                JOIN dbo.Order_No AS n
+                JOIN Order_No AS n
                     ON n.Order_No = lo.Order_No
                 JOIN #AccountTree0 AS act --KMH20240301
                     ON
@@ -1223,13 +1646,12 @@ BEGIN TRY
                     ON n.Customer_ID = cust.Customer_ID
             )
             --AS202020318 #INC-338347
-
-            SELECT
+            SELECT DISTINCT
                 m.Order_No,
-                m.DateFilled,
-                m.Product,
+                DateFilled = CONVERT(VARCHAR(10), m.DateFilled, 120),
+                Product = REPLACE(m.Product, ',', ''),
                 m.ProductTypeName,
-                CASE
+                ISNULL(CASE
                     WHEN m.ProductTypeName = 'Activation'
                         THEN
                             C2.Name --NG20210426
@@ -1238,7 +1660,7 @@ BEGIN TRY
                             'Merchant Service Commission'
                     ELSE
                         C.Name
-                END AS [ProductCategory],
+                END, '') AS [ProductCategory],
                 CASE
                     WHEN m.ProductTypeName = 'Activation'
                         THEN
@@ -1251,17 +1673,17 @@ BEGIN TRY
                 m.Fee, --MR20240215
                 (m.Price - m.DiscAmount + m.Fee) AS RetailCost, --MR20240215
                 m.Account_ID,
-                m.DateOrdered,
+                DateOrdered = CONVERT(VARCHAR(10), m.DateOrdered, 120),
                 CONVERT(VARCHAR(20), m.[MaCommissionAmount]) AS [MaCommissionAmount],
-                m.DateDue AS DirectParentCommissionDateDue, --KMH20230831
+                CONVERT(VARCHAR(10), m.DateDue, 120) AS DirectParentCommissionDateDue, --KMH20230831
                 m.[MaInvoiceNumber],
-                m.[Product SKU],                            --KMH20230831
-                m.Company,                                  --KMH20230831
+                [Product SKU] = REPLACE(m.[Product SKU], ',', ''),                            --KMH20230831
+                Company = REPLACE(m.Company, ',', ''),                                  --KMH20230831
                 m.UserID,                                   --KMH20230831
                 m.Username,
                 m.[MA],
-                m.MA_AccountName,
-                m.UniqueID
+                MA_AccountName = REPLACE(m.MA_AccountName, ',', ''),
+                CONVERT(VARCHAR(25), m.UniqueID) AS UniqueID
             FROM MyCte AS m
             LEFT JOIN dbo.Product_Category AS PC WITH (READUNCOMMITTED)
                 ON m.Product_ID = PC.Product_ID
@@ -1272,22 +1694,22 @@ BEGIN TRY
 
         END;
 
---DROP TABLE IF EXISTS #ListOfAccounts;
---DROP TABLE IF EXISTS #ListOfOrders0;
---DROP TABLE IF EXISTS #DistinctOrders0;
---DROP TABLE IF EXISTS #PrePAK;
---DROP TABLE IF EXISTS #PAK;
---DROP TABLE IF EXISTS #PreOrderAuth;
---DROP TABLE IF EXISTS #OrderAuth;
---DROP TABLE IF EXISTS #OiA;
---DROP TABLE IF EXISTS #OIAAuth;
---DROP TABLE IF EXISTS #ListOfCommInfo0;
---DROP TABLE IF EXISTS #ProductCategory0;
---DROP TABLE IF EXISTS #MAXtspTransactionFeed;
---DROP TABLE IF EXISTS #tspTransactionFeed;
---DROP TABLE IF EXISTS #ListOfOrders1;
---DROP TABLE IF EXISTS #ListOfCommInfo1;
---DROP TABLE IF EXISTS #ProductCategory1;
+    DROP TABLE IF EXISTS #ListOfAccounts;
+    DROP TABLE IF EXISTS #ListOfOrders0;
+    DROP TABLE IF EXISTS #DistinctOrders0;
+    DROP TABLE IF EXISTS #PrePAK;
+    DROP TABLE IF EXISTS #PAK;
+    DROP TABLE IF EXISTS #PreOrderAuth;
+    DROP TABLE IF EXISTS #OrderAuth;
+    DROP TABLE IF EXISTS #OiA;
+    DROP TABLE IF EXISTS #OIAAuth;
+    DROP TABLE IF EXISTS #ListOfCommInfo0;
+    DROP TABLE IF EXISTS #ProductCategory0;
+    DROP TABLE IF EXISTS #MAXtspTransactionFeed;
+    DROP TABLE IF EXISTS #tspTransactionFeed;
+    DROP TABLE IF EXISTS #ListOfOrders1;
+    DROP TABLE IF EXISTS #ListOfCommInfo1;
+    DROP TABLE IF EXISTS #ProductCategory1;
 
 END TRY
 BEGIN CATCH
