@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset MikeCountryman:f2c78e5b-2892-4ca8-a24b-d403abcb1016 stripComments:false runOnChange:true endDelimiter:/
+--changeset MikeCountryman:f2c78e5b-2892-4ca8-a24b-d403abcb1016 stripComments:false runOnChange:true splitstatements:false
 -- =============================================
 -- Author:      Mike Countryman
 -- Create date: 2022-10-26
@@ -23,7 +23,6 @@ BEGIN
                 JOIN dbo.tblOrderItemAddons AS oia ON oia.OrderID = o.ID
                 WHERE
                     [on].OrderType_ID IN (59, 60)
-                    AND [on].Filled = 1
                     AND [on].Void = 0
                     AND oia.AddonsID IN (358, 359)
                     AND oia.AddonsValue = @SessionId
@@ -36,4 +35,3 @@ BEGIN
 END
 
 -- noqa: disable=all
-/
