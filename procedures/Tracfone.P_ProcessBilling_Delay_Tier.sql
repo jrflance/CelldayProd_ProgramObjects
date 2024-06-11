@@ -31,6 +31,7 @@
 --  SB20230907 : Added support for ESimNumberType
 --  SB20240105 : Updated to allow rerunning without creating duplicates due to feeding it twice.  Also added support for remaining unpaid amounts to be paid using a retroactive spiff order.
 --  SB20240226 : Activation fee item handling
+--  SB20240611 : DFY Withholding
 --             :
 -- =============================================
 -- noqa: disable=all
@@ -54,66 +55,79 @@ BEGIN
         accountID INT
     );
 
-    --INSERT INTO #withhold
-    --   VALUES
-    --   (145191);
-    --   INSERT INTO #withhold
-    --   VALUES
-    --   (146427);
-    --   INSERT INTO #withhold
-    --   VALUES
-    --   (145191);
-    --   INSERT INTO #withhold
-    --   VALUES
-    --   (149180);
-    --   INSERT INTO #withhold
-    --   VALUES
-    --   (149393);
-    --   INSERT INTO #withhold
-    --   VALUES
-    --   (145394);
-    --   INSERT INTO #withhold
-    --   VALUES
-    --   (149181);
-    --   INSERT INTO #withhold
-    --   VALUES
-    --   (143628);
-    --   INSERT INTO #withhold
-    --   VALUES
-    --   (145395);
-    --   INSERT INTO #withhold
-    --   VALUES
-    --   (143624);
-    --   INSERT INTO #withhold
-    --   VALUES
-    --   (145399);
-    --   INSERT INTO #withhold
-    --   VALUES
-    --   (145396);
-    --   INSERT INTO #withhold
-    --   VALUES
-    --   (149394);
-    --   INSERT INTO #withhold
-    --   VALUES
-    --   (149393);
-    --   INSERT INTO #withhold
-    --   VALUES
-    --   (145404);
-    --   INSERT INTO #withhold
-    --   VALUES
-    --   (145403);
-    --   INSERT INTO #withhold
-    --   VALUES
-    --   (145402);
-    --   INSERT INTO #withhold
-    --   VALUES
-    --   (145401);
-    --   INSERT INTO #withhold
-    --   VALUES
-    --   (132291);
-    --   INSERT INTO #withhold
-    --   VALUES
-    --   (105883);
+    INSERT INTO #withhold
+    VALUES
+    (156404);
+    INSERT INTO #withhold
+    VALUES
+    (156405);
+    INSERT INTO #withhold
+    VALUES
+    (156599);
+    INSERT INTO #withhold
+    VALUES
+    (157128);
+    INSERT INTO #withhold
+    VALUES
+    (157762);
+    INSERT INTO #withhold
+    VALUES
+    (158053);
+    INSERT INTO #withhold
+    VALUES
+    (158171);
+    INSERT INTO #withhold
+    VALUES
+    (158326);
+    INSERT INTO #withhold
+    VALUES
+    (158554);
+    INSERT INTO #withhold
+    VALUES
+    (159130);
+    INSERT INTO #withhold
+    VALUES
+    (160038);
+    INSERT INTO #withhold
+    VALUES
+    (161575);
+    INSERT INTO #withhold
+    VALUES
+    (156597);
+    INSERT INTO #withhold
+    VALUES
+    (156598);
+    INSERT INTO #withhold
+    VALUES
+    (156689);
+    INSERT INTO #withhold
+    VALUES
+    (156960);
+    INSERT INTO #withhold
+    VALUES
+    (157824);
+    INSERT INTO #withhold
+    VALUES
+    (158159);
+    INSERT INTO #withhold
+    VALUES
+    (158161);
+    INSERT INTO #withhold
+    VALUES
+    (158328);
+    INSERT INTO #withhold
+    VALUES
+    (158743);
+    INSERT INTO #withhold
+    VALUES
+    (158879);
+    INSERT INTO #withhold
+    VALUES
+    (159051);
+    INSERT INTO #withhold
+    VALUES
+    (159999);
+
     IF OBJECT_ID('tempdb..#ListOrdersToProcess') IS NOT NULL
     BEGIN
         DROP TABLE #ListOrdersToProcess;
@@ -1070,4 +1084,5 @@ BEGIN
 
 END;
 -- noqa: disable=all;
+
 /
