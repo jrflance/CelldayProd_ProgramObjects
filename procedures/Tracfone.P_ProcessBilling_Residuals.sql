@@ -4,9 +4,7 @@
 
 -- noqa: disable=all
 
-SET QUOTED_IDENTIFIER ON
-SET ANSI_NULLS ON
-GO
+
 -- =============================================
 --             :
 --      Author : Angela Bogantz
