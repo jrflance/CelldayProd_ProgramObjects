@@ -127,6 +127,15 @@ BEGIN
     INSERT INTO #withhold
     VALUES
     (159999);
+    INSERT INTO #withhold
+    VALUES
+    (158881);
+    INSERT INTO #withhold
+    VALUES
+    (158880);
+    INSERT INTO #withhold
+    VALUES
+    (159515);
 
     IF OBJECT_ID('tempdb..#ListOrdersToProcess') IS NOT NULL
     BEGIN
