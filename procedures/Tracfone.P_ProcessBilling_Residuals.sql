@@ -25,7 +25,7 @@
 --  SB20231025 : Handling for Branded Handsets to follow TracFone reimbursement amounts only - based on new v. port
 --  SB20240611 : DFY Withholding
 -- =============================================
-CREATE OR Alter PROCEDURE [Tracfone].[P_ProcessBilling_Residuals]
+CREATE OR ALTER	PROCEDURE [Tracfone].[P_ProcessBilling_Residuals]
 (@FileID INT)
 AS
 BEGIN TRY
@@ -56,87 +56,88 @@ BEGIN TRY
     );
 
 
-    INSERT INTO #withhold
-    VALUES
-    (156404);
-    INSERT INTO #withhold
-    VALUES
-    (156405);
-    INSERT INTO #withhold
-    VALUES
-    (156599);
-    INSERT INTO #withhold
-    VALUES
-    (157128);
-    INSERT INTO #withhold
-    VALUES
-    (157762);
-    INSERT INTO #withhold
-    VALUES
-    (158053);
-    INSERT INTO #withhold
-    VALUES
-    (158171);
-    INSERT INTO #withhold
-    VALUES
-    (158326);
-    INSERT INTO #withhold
-    VALUES
-    (158554);
-    INSERT INTO #withhold
-    VALUES
-    (159130);
-    INSERT INTO #withhold
-    VALUES
-    (160038);
-    INSERT INTO #withhold
-    VALUES
-    (161575);
-    INSERT INTO #withhold
-    VALUES
-    (156597);
-    INSERT INTO #withhold
-    VALUES
-    (156598);
-    INSERT INTO #withhold
-    VALUES
-    (156689);
-    INSERT INTO #withhold
-    VALUES
-    (156960);
-    INSERT INTO #withhold
-    VALUES
-    (157824);
-    INSERT INTO #withhold
-    VALUES
-    (158159);
-    INSERT INTO #withhold
-    VALUES
-    (158161);
-    INSERT INTO #withhold
-    VALUES
-    (158328);
-    INSERT INTO #withhold
-    VALUES
-    (158743);
-    INSERT INTO #withhold
-    VALUES
-    (158879);
-    INSERT INTO #withhold
-    VALUES
-    (159051);
-    INSERT INTO #withhold
-    VALUES
-    (159999);
-    INSERT INTO #withhold
-    VALUES
-    (158881);
-    INSERT INTO #withhold
-    VALUES
-    (158880);
-    INSERT INTO #withhold
-    VALUES
-    (159515);
+    --INSERT INTO #withhold
+    --VALUES
+    --(156404);
+    --INSERT INTO #withhold
+    --VALUES
+    --(156405);
+    --INSERT INTO #withhold
+    --VALUES
+    --(156599);
+    --INSERT INTO #withhold
+    --VALUES
+    --(157128);
+    --INSERT INTO #withhold
+    --VALUES
+    --(157762);
+    --INSERT INTO #withhold
+    --VALUES
+    --(158053);
+    --INSERT INTO #withhold
+    --VALUES
+    --(158171);
+    --INSERT INTO #withhold
+    --VALUES
+    --(158326);
+    --INSERT INTO #withhold
+    --VALUES
+    --(158554);
+    --INSERT INTO #withhold
+    --VALUES
+    --(159130);
+    --INSERT INTO #withhold
+    --VALUES
+    --(160038);
+    --INSERT INTO #withhold
+    --VALUES
+    --(161575);
+    --INSERT INTO #withhold
+    --VALUES
+    --(156597);
+    --INSERT INTO #withhold
+    --VALUES
+    --(156598);
+    --INSERT INTO #withhold
+    --VALUES
+    --(156689);
+    --INSERT INTO #withhold
+    --VALUES
+    --(156960);
+    --INSERT INTO #withhold
+    --VALUES
+    --(157824);
+    --INSERT INTO #withhold
+    --VALUES
+    --(158159);
+    --INSERT INTO #withhold
+    --VALUES
+    --(158161);
+    --INSERT INTO #withhold
+    --VALUES
+    --(158328);
+    --INSERT INTO #withhold
+    --VALUES
+    --(158743);
+    --INSERT INTO #withhold
+    --VALUES
+    --(158879);
+    --INSERT INTO #withhold
+    --VALUES
+    --(159051);
+    --INSERT INTO #withhold
+    --VALUES
+    --(159999);
+    --INSERT INTO #withhold
+    --VALUES
+    --(158881);
+    --INSERT INTO #withhold
+    --VALUES
+    --(158880);
+    --INSERT INTO #withhold
+    --VALUES
+    --(159515);
+
 
     UPDATE f
     SET f.FileStatusId = 20,
