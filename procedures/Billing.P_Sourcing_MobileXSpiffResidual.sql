@@ -1,12 +1,13 @@
 --liquibase formatted sql
 
---changeset KarinaMasihHudson:441f8d3b1dfe4942bea0e4925d4653f9 stripComments:false runOnChange:true splitStatements:false
+--changeset MelissaRios:441f8d3b1dfe4942bea0e4ajdk4736dh stripComments:false runOnChange:true splitStatements:false
 /*=============================================
        Author : Karina Masih-Hudson
   Create Date : 2024-03-27
   Description : Payout for MobileX following existing processes using database instead of file
  SSIS Package : .dtsx
           Job :
+  MR20240618 : Added logic to determine payout amounts for pre-May 2024 transactions
  =============================================*/
 
 CREATE OR ALTER PROCEDURE [Billing].[P_Sourcing_MobileXSpiffResidual]
@@ -290,6 +291,7 @@ BEGIN
             [DiscountClass_ID] INT,
             [ActivationOrderID] INT NOT NULL,
             [ActivationOrderNo] INT NOT NULL,
+            [ActivationDateFilled] DATETIME,
             [ActivationOrderTypeID] INT,
             [MonthCount] INT,
             [TopParent] INT NOT NULL,
@@ -320,6 +322,7 @@ BEGIN
             , d.DiscountClass_ID
             , d.ActivationOrderID
             , d.ActivationOrderNo
+            , d.ActivationDateFilled
             , d.OrderType_ID
             , d.MonthCount
             , d.TopParent
@@ -348,6 +351,7 @@ BEGIN
                     , t.DiscountClass_ID
                     , t.ActivationOrderID
                     , t.ActivationOrderNo
+                    , t.ActivationDateFilled
                     , t.OrderType_ID
                     , t.MonthCount
                     , t.TopParent
@@ -383,6 +387,7 @@ BEGIN
                     , t.DiscountClass_ID
                     , t.ActivationOrderID
                     , t.ActivationOrderNo
+                    , t.ActivationDateFilled
                     , t.OrderType_ID
                     , t.MonthCount
                     , t.TopParent
@@ -440,17 +445,56 @@ BEGIN
                     )
             ) AS d
 
+        CREATE TABLE #PreMay2024   --MR20240618 START
+        (PayoutProductID INT, Discount_Amt DECIMAL(9, 2), Percent_Amount_Flg NCHAR(1))
+
+        INSERT INTO #PreMay2024
+        VALUES
+        (21975, 6.67, 'A')  --MobileX Unlimited $20 Spiff Month 2
+        , (21976, 6.67, 'A') --MobileX Unlimited $20 Spiff Month 3
+        , (21977, 10, 'A') --MobileX Unlimited $30 Spiff Month 2
+        , (21978, 10, 'A') --MobileX Unlimited $30 Spiff Month 3
+        , (21979, 33.33, 'A') --MobileX Unlimited $50 Spiff Month 2
+        , (21980, 33.33, 'A') --MobileX Unlimited $50 Spiff Month 3
+
         /*Dealer spiff payout amount*/
-        UPDATE pb
-        SET pb.MerchantAmount = ISNULL(dcp.Discount_Amt, 0.00)
-        --SELECT pb.TopUpOrderID, pb.MerchantAmount, pb.Product_ID, pb.TopParent, pb.payoutproductid, dcp.DiscountClass_ID, dcp.Discount_Amt
-        FROM #PreBase AS pb
-        JOIN dbo.DiscountClass_Products AS dcp
-            ON
-                dcp.Product_ID = pb.PayoutProductID
-                AND dcp.DiscountClass_ID = pb.DiscountClass_ID
-                AND dcp.ApprovedToSell_Flg = 1
-                AND dcp.Percent_Amount_Flg LIKE 'A'
+        IF
+            EXISTS (
+                SELECT TOP 1 1
+                FROM #PreBase
+                WHERE ActivationDateFilled < '2024-05-01'
+            )
+            BEGIN
+                UPDATE pb
+                SET pb.MerchantAmount = ISNULL(pm.Discount_Amt, 0.00)
+                --SELECT pb.TopUpOrderID, pb.MerchantAmount, pb.Product_ID, pb.TopParent, pb.payoutproductid, pm.Discount_Amt, pb.ActivationDateFilled
+                FROM #PreBase AS pb
+                JOIN #PreMay2024 AS pm
+                    ON
+                        pm.PayoutProductID = pb.PayoutProductID
+                        AND pm.Percent_Amount_Flg LIKE 'A'
+                WHERE pb.ActivationDateFilled < '2024-05-01'
+            END
+
+        IF
+            EXISTS (
+                SELECT TOP 1 1
+                FROM #PreBase
+                WHERE ActivationDateFilled >= '2024-05-01'
+            )
+            BEGIN
+                UPDATE pb
+                SET pb.MerchantAmount = ISNULL(dcp.Discount_Amt, 0.00)
+                --SELECT pb.TopUpOrderID, pb.MerchantAmount, pb.Product_ID, pb.TopParent, pb.payoutproductid, dcp.DiscountClass_ID, dcp.Discount_Amt
+                FROM #PreBase AS pb
+                JOIN dbo.DiscountClass_Products AS dcp
+                    ON
+                        dcp.Product_ID = pb.PayoutProductID
+                        AND dcp.DiscountClass_ID = pb.DiscountClass_ID
+                        AND dcp.ApprovedToSell_Flg = 1
+                        AND dcp.Percent_Amount_Flg LIKE 'A'
+                WHERE pb.ActivationDateFilled >= '2024-05-01'
+            END --MR20240618 END
 
         /*Residual*/
         UPDATE pb
