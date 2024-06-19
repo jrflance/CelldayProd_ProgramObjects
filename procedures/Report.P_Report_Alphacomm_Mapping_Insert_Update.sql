@@ -9,18 +9,28 @@
 				:
 	Description	: SP used in CRM to add AR accounts to Alphacomm Account Mapping table
 				:
+	NG20240618  : Hot Fix issued for ISNULL(AccountID) mistake
 ============================================= */
 CREATE OR ALTER PROCEDURE [Report].[P_Report_Alphacomm_Mapping_Insert_Update]
     (
         @SessionID INT
         , @Option INT
-        , @AccountID INT
+        , @AccountID VARCHAR(MAX)
         , @AlphacommCustomerID VARCHAR(20)
     )
 AS
 BEGIN TRY
-    IF ISNULL(@AccountID, 0) = 0
+    ----Error Handling (Global)---------------------------------------------------------------------------------------------------------------
+    IF ISNULL(@SessionID, 0) <> 2
+        RAISERROR ('This report is highly restricted. Please see your T-Cetra representative if you wish to request access.', 12, 1);
+
+    IF ISNULL(@AccountID, '') = '' --NG20240618
         RAISERROR ('The AccountID column cannot be left blank, please enter an AccountID and try again.', 12, 1);
+
+    IF ISNULL(@AlphacommCustomerID, '') = ''
+        RAISERROR ('The AlphacommCustomerID column cannot be left blank, please enter an AccountID and try again.', 14, 1);
+
+    -------------------------------------------------------------------------------------------------------------------------------------------
 
     IF OBJECT_ID('tempdb..#Account') IS NOT NULL
         BEGIN
@@ -32,6 +42,8 @@ BEGIN TRY
     SELECT RESULT
     FROM [dbo].[FnGetStringInTable](@AccountID, ',')
 
+    IF NOT EXISTS (SELECT a.Account_ID FROM dbo.Account AS a JOIN #Account AS ac ON ac.Account_ID = a.Account_ID)
+        RAISERROR ('The Account ID entered currently does not exist in our system, please check the Account ID and try again.', 14, 1);
     ------View----------------------------------------------------------------------------------------------------------------------------------
 
     IF @Option = 0 -- View ESN or SIM
@@ -45,14 +57,6 @@ BEGIN TRY
     ------Update--------------------------------------------------------------------------------------------------------------------------------
     IF @Option = 1 -- Update ESN or SIM
         BEGIN
-            IF ISNULL(@AlphacommCustomerID, '') = ''
-                RAISERROR ('The AlphacommCustomerID column cannot be left blank, please enter an AccountID and try again.', 13, 1);
-
-            IF NOT EXISTS (SELECT aam.AccountId FROM Account.tblAlphacommAccountMapping AS aam WHERE @AccountID = aam.AccountId)
-                RAISERROR (
-                    'The Account ID entered currently does not exist in the mapping table, please use the insert option instead of update.', 13, 1
-                );
-
             MERGE Account.tblAlphacommAccountMapping AS aam
             USING #Account AS ac
                 ON aam.AccountId = ac.Account_ID
@@ -61,7 +65,7 @@ BEGIN TRY
             WHEN NOT MATCHED
                 THEN INSERT
                     (AccountId, AlphacommCustomerId)
-                VALUES (@AccountID, @AlphacommCustomerID);
+                VALUES (ac.Account_ID, @AlphacommCustomerID);
 
 
             SELECT ac.*, aam.AlphacommCustomerId
@@ -72,15 +76,10 @@ BEGIN TRY
     --------Insert--------------------------------------------------------------------------------------------------------------------------------
     IF @Option = 2
         BEGIN
-            IF ISNULL(@AlphacommCustomerID, '') = ''
-                RAISERROR ('The AlphacommCustomerID column cannot be left blank, please enter an AccountID and try again.', 14, 1);
-
             IF EXISTS (SELECT aam.AccountId FROM Account.tblAlphacommAccountMapping AS aam JOIN #Account AS ac ON aam.AccountId = ac.Account_ID)
-                RAISERROR (
-                    'One or more of the VP Product IDs entered already exists in this table, please use the update option to complete this update.', 14, 1 -- noqa: LT05
-                );
+                RAISERROR ('One or more of the VP Product IDs entered already exists in this table, please use the update option to complete this request.', 14, 1); -- noqa: LT05
 
-            IF NOT EXISTS (SELECT Account_ID FROM dbo.Account WHERE Account_ID = @AccountID)
+            IF NOT EXISTS (SELECT a.Account_ID FROM dbo.Account AS a JOIN #Account AS ac ON ac.Account_ID = a.Account_ID)
                 RAISERROR ('The Account ID entered currently does not exist in our system, please check the Account ID and try again.', 14, 1);
 
             MERGE Account.tblAlphacommAccountMapping AS aam
@@ -89,7 +88,7 @@ BEGIN TRY
             WHEN NOT MATCHED
                 THEN INSERT
                     (AccountId, AlphacommCustomerId)
-                VALUES (@AccountID, @AlphacommCustomerID);
+                VALUES (ac.Account_ID, @AlphacommCustomerID);
 
 
             SELECT ac.*, aam.AlphacommCustomerId

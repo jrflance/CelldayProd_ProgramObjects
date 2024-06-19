@@ -10,6 +10,7 @@
 	Description	: SP used in CRM to generate order commissions for MAs and reverse created commissions for account 2
 				:
 	NG20240530	: Fixed a bug where 0.00 commission were causing the error statement to trigger
+    NG20240618  : Removed IF EXISTS search by Order_No as it was pulling multiple instances of the Order in and triggering the error when it should not have. -- noqa: LT05
 ============================================= */
 CREATE OR ALTER PROCEDURE [Report].[P_Report_Generate_Manual_Order_Commissions]
     (
@@ -67,8 +68,7 @@ BEGIN
                         SELECT *
                         FROM dbo.Order_Commission
                         WHERE
-                            Orders_ID = @Order_ID AND Account_ID = @MA_AccountID AND Commission_Amt > 0.00
-                            OR Order_No = @Order_No AND Account_ID = @MA_AccountID AND Commission_Amt > 0.00
+                            Orders_ID = @Order_ID AND Account_ID = @MA_AccountID AND Commission_Amt > 0.00 --NG20240618
                     )
                     RAISERROR (
                         'The Order No provided already has a commission amount greater than 0 associated with it, please enter a different order number and try again.', -- noqa: LT05
