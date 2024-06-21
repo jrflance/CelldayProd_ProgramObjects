@@ -8,6 +8,7 @@
 --             :
 -- Description : Creates Subsidy orders
 --             :
+-- NG20240619  : Added Void option for Subsidy orders due to influx of tickets
 -- =============================================
 CREATE OR ALTER PROCEDURE [Report].[P_Report_Create_FillBrandedPromoOrderOver1Year]
     (
@@ -21,7 +22,10 @@ CREATE OR ALTER PROCEDURE [Report].[P_Report_Create_FillBrandedPromoOrderOver1Ye
     )
 AS
 BEGIN TRY
-    IF @UserID NOT IN (259617, 279685, 257210) --Restricted to Nic Griesdorn, Matt Moore, Tyler Fee
+    IF @UserID NOT IN (259617, 257210) AND @Option IN (0, 1) --Restricted to Nic Griesdorn, Tyler Fee
+        RAISERROR ('This report is highly user restricted. Please have your manager escalate to IT Support if access is required.', 12, 1);
+
+    IF @UserID NOT IN (259617, 257210, 87130) AND @Option IN (0, 2, 3) --Restricted to Nic Griesdorn, Tyler Fee
         RAISERROR ('This report is highly user restricted. Please have your manager escalate to IT Support if access is required.', 12, 1);
 
     ----------------------------------------------------------------------------------------------------------------- Start of Options
@@ -345,6 +349,51 @@ BEGIN TRY
                 @UserID AS updateUser,
                 GETDATE() AS UpdateDate,
                 'User: ' + CAST(@UserID AS NVARCHAR(15)) + ' Filled a Promotion Order ' + CAST(@PromoOrderNo AS NVARCHAR(15)) + ' Manually'
+                    AS Details
+        END;
+    ----------------------------------------------------------------------------------------------------------------- Void Promos
+    IF @Option = 3
+        BEGIN
+
+            IF NOT EXISTS (SELECT * FROM dbo.Order_No WHERE Order_No = @PromoOrderNo AND OrderType_ID IN (59, 60))
+                RAISERROR (
+                    'The following order either does not exist or is not a Promo Order type, please ensure that the correct order is entered and try again.', -- noqa: LT05
+                    14,
+                    1
+                );
+
+            IF EXISTS (SELECT o.* FROM dbo.Order_No AS o WHERE o.Order_No = @PromoOrderNo AND o.OrderType_ID IN (59, 60) AND o.Paid = 1)
+                RAISERROR ('The Promo order you are attempting to fill is already marked as paid.', 14, 1);
+
+            IF EXISTS (SELECT o.* FROM dbo.Order_No AS o WHERE o.Order_No = @PromoOrderNo AND o.OrderType_ID IN (59, 60) AND o.Paid = 1)
+                RAISERROR ('The Promo order you are attempting to void is already marked as void.', 14, 1);
+
+            UPDATE dbo.Order_No
+            SET
+                Void = 1
+                , DateFilled = GETDATE()
+                , Admin_Updated = GETDATE()
+                , Admin_Name = 'PromoVoidCRM'
+            WHERE Order_No = @PromoOrderNo
+
+            SELECT o.Order_No, o.Process, o.Filled, o.Paid, o.Void, o.DateOrdered, o.DateFilled, o.DateDue, o.OrderTotal FROM dbo.Order_No AS o
+            WHERE o.Order_No = @PromoOrderNo
+
+            INSERT INTO Logs.tblOperationLog (
+                [EntityTypeID]
+                , [OperationTypeID]
+                , [EntityID]
+                , [updateUser]
+                , [UpdateDate]
+                , [Details]
+            )
+            SELECT
+                50024 AS EntityTypeId,
+                50024 AS OperationTypeID,
+                'VoidPromoProcess' AS EntityID,
+                @UserID AS updateUser,
+                GETDATE() AS UpdateDate,
+                'User: ' + CAST(@UserID AS NVARCHAR(15)) + ' Voided a Promotion Order ' + CAST(@PromoOrderNo AS NVARCHAR(15)) + ' Manually'
                     AS Details
         END;
 END TRY
