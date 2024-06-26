@@ -14,7 +14,7 @@
 --  BS20230414 : Added support to return all carriers and carrier name
 --  ZS20240625 : added no commision reason from dealer commission details to instant and retro spiff
 -- =============================================
-ALTER PROCEDURE [Report].[P_GetSpiffDashboardDetails] -- noqa: PRS
+ALTER PROCEDURE [Report].[P_GetSpiffDashboardDetails]
     (
         @Account_ID INT,
         @Carrier_ID INT = NULL,
