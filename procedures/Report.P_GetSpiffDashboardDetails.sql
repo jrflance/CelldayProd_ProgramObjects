@@ -1,5 +1,5 @@
 --liquibase formatted sql
---changeset MoeDaaboul:795f1910 stripComments:false runOnChange:true splitStatements:false
+--changeset saialladi:795f1910576 stripComments:false runOnChange:true splitStatements:false
 -- =============================================
 --             :
 --      Author : Jacob Lowe
@@ -12,8 +12,9 @@
 --  BS20230327 : Added key value search functionality, currently supporting IMEI search
 --  SK20230330 : Added Search filter for SIM/ICCID type
 --  BS20230414 : Added support to return all carriers and carrier name
+--  ZS20240625 : added no commision reason from dealer commission details to instant and retro spiff
 -- =============================================
-ALTER PROCEDURE [Report].[P_GetSpiffDashboardDetails]
+ALTER PROCEDURE [Report].[P_GetSpiffDashboardDetails] -- noqa: PRS
     (
         @Account_ID INT,
         @Carrier_ID INT = NULL,
@@ -51,7 +52,7 @@ BEGIN
     )
     SELECT DISTINCT
         ProductID,
-        CASE BPProcessTypeID
+        CASE BPProcessTypeID AS BPProcessTypeID
             WHEN 1
                 THEN
                     'SecondMonth'
@@ -84,7 +85,7 @@ BEGIN
     UNION
     SELECT DISTINCT
         Product_id,
-        CASE CommissionType
+        CASE CommissionType AS CommissionType
             WHEN 'ACTIVATION SPIFF ADJUSTMENT'
                 THEN
                     'FirstMonth'
@@ -110,7 +111,7 @@ BEGIN
     UNION
     SELECT DISTINCT
         Product_id,
-        CASE CommissionType
+        CASE CommissionType AS CommissionType
             WHEN 'MONTH 2 SPIFF'
                 THEN
                     'SecondMonth'
@@ -235,7 +236,7 @@ BEGIN
         t.CarrierName,
         CAST(ISNULL(t.Status, '') AS INT) AS [InvoiceOrderNumber],
         ISNULL(t.DateDue, '1900-01-01') AS [Invoice_Date],
-        '' AS [Ineligible_Reason],
+        de.NON_COMMISSIONED_REASON AS [Ineligible_Reason],
         ds.SKU AS [SKU],
         t.IMEI AS [Device],
         t.Sim,
@@ -249,6 +250,8 @@ BEGIN
             AND o.ParentItemID <> 0
     JOIN dbo.Products ON Products.Product_ID = o.Product_ID AND Products.Product_Type = 4
     LEFT JOIN #DeviceSKUs AS ds ON ds.IMEI = t.IMEI
+    LEFT JOIN dbo.tblOrderItemAddons AS oia ON oia.OrderID = o.ID AND oia.AddonsID = 196
+    LEFT JOIN Tracfone.tblDealerCommissionDetail AS de ON de.RTR_TXN_REFERENCE1 = oia.AddonsValue
     WHERE o.Price <> 0
     UNION ALL
     --Retro
@@ -289,7 +292,7 @@ BEGIN
             ELSE
                 '1900-01-01'
         END AS [Invoice_Date],
-        '' AS [Ineligible_Reason],
+        de.NON_COMMISSIONED_REASON AS [Ineligible_Reason],
         ds.SKU AS [SKU],
         t.IMEI AS [Device],
         t.Sim,
@@ -306,6 +309,8 @@ BEGIN
     LEFT JOIN #DeviceSKUs AS ds ON ds.IMEI = t.IMEI
     LEFT JOIN @Products AS p
         ON o.Product_ID = p.ProductID
+    LEFT JOIN dbo.tblOrderItemAddons AS oia ON oia.OrderID = o.ID AND oia.AddonsID = 196
+    LEFT JOIN Tracfone.tblDealerCommissionDetail AS de ON de.RTR_TXN_REFERENCE1 = oia.AddonsValue
     WHERE n2.OrderType_ID IN (45, 46)
     UNION ALL
     --Promo and Reverse VZW
@@ -501,7 +506,7 @@ BEGIN
         ON
             o.Order_No = t.Order_No
             AND o.ParentItemID <> 0
-    JOIN dbo.Products ON Products.Product_ID = o.Product_ID AND Product_Type = 17
+    JOIN dbo.Products ON Products.Product_ID = o.Product_ID AND Products.Product_Type = 17
     LEFT JOIN #DeviceSKUs AS ds ON ds.IMEI = t.IMEI
     WHERE o.Price <> 0
     ORDER BY t.Order_No;
