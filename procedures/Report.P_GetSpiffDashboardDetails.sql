@@ -236,7 +236,7 @@ BEGIN
         t.CarrierName,
         CAST(ISNULL(t.Status, '') AS INT) AS [InvoiceOrderNumber],
         ISNULL(t.DateDue, '1900-01-01') AS [Invoice_Date],
-        de.NON_COMMISSIONED_REASON AS [Ineligible_Reason],
+        CASE WHEN de.NON_COMMISSIONED_REASON IN ('Port', 'New') THEN '' ELSE de.NON_COMMISSIONED_REASON END AS [Ineligible_Reason],
         ds.SKU AS [SKU],
         t.IMEI AS [Device],
         t.Sim,
@@ -292,7 +292,7 @@ BEGIN
             ELSE
                 '1900-01-01'
         END AS [Invoice_Date],
-        de.NON_COMMISSIONED_REASON AS [Ineligible_Reason],
+        CASE WHEN de.NON_COMMISSIONED_REASON IN ('Port', 'New') THEN '' ELSE de.NON_COMMISSIONED_REASON END AS [Ineligible_Reason],
         ds.SKU AS [SKU],
         t.IMEI AS [Device],
         t.Sim,
