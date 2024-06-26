@@ -1,5 +1,5 @@
 --liquibase formatted sql
---changeset saialladi:795f1910576 stripComments:false runOnChange:true splitStatements:false
+--changeset MoeDaaboul:795f1910 stripComments:false runOnChange:true splitStatements:false
 -- =============================================
 --             :
 --      Author : Jacob Lowe
@@ -52,7 +52,7 @@ BEGIN
     )
     SELECT DISTINCT
         ProductID,
-        CASE BPProcessTypeID AS BPProcessTypeID
+        CASE BPProcessTypeID
             WHEN 1
                 THEN
                     'SecondMonth'
@@ -85,7 +85,7 @@ BEGIN
     UNION
     SELECT DISTINCT
         Product_id,
-        CASE CommissionType AS CommissionType
+        CASE CommissionType
             WHEN 'ACTIVATION SPIFF ADJUSTMENT'
                 THEN
                     'FirstMonth'
@@ -111,7 +111,7 @@ BEGIN
     UNION
     SELECT DISTINCT
         Product_id,
-        CASE CommissionType AS CommissionType
+        CASE CommissionType
             WHEN 'MONTH 2 SPIFF'
                 THEN
                     'SecondMonth'
