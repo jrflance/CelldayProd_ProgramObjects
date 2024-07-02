@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset  BrandonStahl:3bd8b369-4f98-403d-a6da-1d09a8dcbd48 stripComments:false runOnChange:true splitStatements:false
+--changeset  BrandonStahl:4313f452-1479-4d06-b412-7d6be78b35a4 stripComments:false runOnChange:true splitStatements:false
 
 -- =============================================
 -- Author:		Brandon Stahl
@@ -28,7 +28,27 @@ BEGIN
 
         DELETE i
         FROM Upload.tblAccountIpWhiteList AS i
-        WHERE i.ProcessAccountId = @TopParentAccountId
+        WHERE i.ProcessAccountId = @TopParentAccountId;
+
+        DROP TABLE IF EXISTS #SplitValues;
+
+        WITH SplitValues AS (
+            SELECT
+                t.Id,
+                s.[Value] AS txt,
+                ROW_NUMBER() OVER (PARTITION BY t.Id ORDER BY (SELECT 1)) AS RowNum
+            FROM Upload.tblPlainTextFiles AS t
+            CROSS APPLY STRING_SPLIT(t.txt, ',') AS s
+            WHERE t.FileID = @FileId
+        )
+        SELECT
+            sv.Id,
+            MAX(CASE WHEN sv.RowNum = 1 THEN sv.txt END) AS AccountId,
+            MAX(CASE WHEN sv.RowNum = 2 THEN sv.txt END) AS IPAddresses
+        INTO #SplitValues
+        FROM SplitValues AS sv
+        GROUP BY sv.Id
+        HAVING MAX(CASE WHEN sv.RowNum = 1 THEN sv.txt END) != 'AccountId';
 
         BEGIN TRANSACTION
         INSERT INTO Upload.tblAccountIpWhiteList
@@ -38,14 +58,10 @@ BEGIN
             ProcessAccountId
         )
         SELECT
-            TRIM(A.Chr1) AS AccountId,
-            TRIM(REPLACE(REPLACE(A.Chr9, CHAR(13), ''), CHAR(10), '')) AS IPAddresses,
+            s.AccountId,
+            LEFT(s.IPAddresses, 500) AS IPAddresses,
             @TopParentAccountId AS ProcessAccountId
-        FROM Upload.tblPlainTextFiles AS t
-        CROSS APPLY dbo.SplitText(t.txt, @Delimiter, '"') AS A
-        WHERE
-            t.FileID = @FileID
-            AND TRIM(A.Chr1) != 'AccountId';;
+        FROM #SplitValues AS s;
 
         COMMIT TRANSACTION;
     END TRY

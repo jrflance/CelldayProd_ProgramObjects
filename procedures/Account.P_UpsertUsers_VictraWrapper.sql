@@ -7,7 +7,7 @@
 -- Create date: 2024-06-19
 -- Description: Victra wrapper temp solution until data upload v2 is completed.
 -- =============================================
-CREATE OR ALTER PROCEDURE [Account].[P_UpdateAccountIps_VictraWrapper]
+CREATE OR ALTER PROCEDURE [Account].[P_UpsertUsers_VictraWrapper]
     (
         @FileId INT
     )
@@ -35,7 +35,7 @@ BEGIN
         VALUES
         (
             -- noqa: disable=all
-            'AccountId,Status,Message'
+            'VidapayUserId,VidapayUserName,SourceUserId,SourceUserName,FirstName,LastName,Email,UserType,LocationId,Change,AccountId,Status,Message'
             -- noqa: enable=all
         );
 
@@ -43,13 +43,22 @@ BEGIN
 
         CREATE TABLE #final
         (
-            AccountId VARCHAR(100),
-            IPAddresses VARCHAR(500),
-            [Status] VARCHAR(100),
-            [Message] VARCHAR(100)
+            VidapayUserId INT NULL,
+            VidapayUserName VARCHAR(100),
+            SourceUserId VARCHAR(100) NULL,
+            SourceUserName VARCHAR(100) NULL,
+            FirstName VARCHAR(100) NULL,
+            LastName VARCHAR(100) NULL,
+            Email VARCHAR(100) NULL,
+            UserType VARCHAR(100) NULL,
+            LocationId VARCHAR(100) NULL,
+            Change VARCHAR(100) NULL,
+            AccountId VARCHAR(100) NULL,
+            [Status] VARCHAR(100) NULL,
+            [Message] VARCHAR(100) NULL,
         );
 
-        EXECUTE Account.P_UpdateAccountIps @TopParentAccountId;
+        EXECUTE Account.P_UpsertUsers @TopParentAccountId;
 
         WITH CTEFinal AS (
             SELECT
@@ -59,20 +68,20 @@ BEGIN
                         @Separator,
                         '',
                         '',
+                        VidapayUserId,
+                        VidapayUserName,
+                        SourceUserId,
+                        SourceUserName,
+                        FirstName,
+                        LastName,
+                        Email,
+                        UserType,
+                        LocationId,
+                        Change,
                         AccountId,
-                        IPAddresses,
                         [Status],
                         -- noqa: disable=all
                         [Message],
-                    DEFAULT,
-                    DEFAULT,
-                    DEFAULT,
-                    DEFAULT,
-                    DEFAULT,
-                    DEFAULT,
-                    DEFAULT,
-                    DEFAULT,
-                    DEFAULT,
                     DEFAULT,
                     DEFAULT,
                     DEFAULT,
@@ -139,7 +148,7 @@ BEGIN
             (
                 SELECT COUNT(1) FROM CellDayTemp.Upload.tblOutPutFile
             );
-
+        --SET @CNT = IIF(@CNT < 2, 2, @CNT);
         SELECT @CNT AS RecordCount;
     END TRY
     BEGIN CATCH
