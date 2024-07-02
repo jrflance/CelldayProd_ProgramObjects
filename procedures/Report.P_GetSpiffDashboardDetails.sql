@@ -223,7 +223,7 @@ BEGIN
             AND n2.DateOrdered > t.DateOrdered
     WHERE n2.OrderType_ID IN (45, 46, 59, 60, 30, 34, 31, 32) AND n2.Account_ID = @Account_ID
     --Instant
-    SELECT
+    SELECT DISTINCT
         t.Order_No AS [ActivationOrderNumber],
         t.Order_No AS [OrderNumber],
         ISNULL(o.Price, 0) AS [Amt],
@@ -259,7 +259,7 @@ BEGIN
     WHERE o.Price <> 0
     UNION ALL
     --Retro
-    SELECT
+    SELECT DISTINCT
         t.Order_No AS [ActivationOrderNumber],
         n2.Order_No AS [OrderNumber],
         ISNULL(o.Price, 0) AS [Amt],
