@@ -13,7 +13,9 @@ steps:
   - script: |
       git fetch origin $(System.PullRequest.TargetBranch)
       CHANGED_FILES=$(git diff --name-only FETCH_HEAD $(Build.SourceVersion) | grep '\.sql$')
-      echo "Linting the following SQL files:"
-      echo $CHANGED_FILES
-      echo $CHANGED_FILES | xargs sqlfluff lint
+      if [ ! "$CHANGED_FILES" == ""]; then
+        echo "Linting the following SQL files:"
+        echo $CHANGED_FILES
+        echo $CHANGED_FILES | xargs sqlfluff lint
+      fi
     displayName: 'Lint SQL Files'

@@ -10,6 +10,8 @@ exclude_rules = CP02,RF01,ST06
 #default 80
 max_line_length = 150
 
+encoding = utf-8
+
 large_file_skip_byte_limit = 0
 
 [sqlfluff:rules:aliasing.table]
