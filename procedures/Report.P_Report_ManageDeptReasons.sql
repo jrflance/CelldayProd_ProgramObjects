@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset KarinaMasihHudson:441f9d5b1dfe5321bea0e4925d4653f9 stripComments:false runOnChange:true splitStatements:false
+--changeset JohnRose:637B8141-0447-41E7-BDD6-8F94E1116F0A stripComments:false runOnChange:true splitStatements:false
 /*=============================================
        Author : Karina Masih-Hudson
   Create Date : 2024-05-20
@@ -119,7 +119,9 @@ BEGIN TRY
                                 FROM Cellday_Prod.dbo.CRM_Department AS cd
                                 JOIN Cellday_Prod.dbo.CRM_Reason AS cr
                                     ON cr.Category = cd.ID
-                                WHERE cr.Name = @Reason
+                                WHERE
+                                    cr.Name = @Reason
+                                    AND cr.[Cat_Desc] = @Department
                             )
                             BEGIN
                                 INSERT INTO Cellday_Prod.dbo.CRM_Reason
