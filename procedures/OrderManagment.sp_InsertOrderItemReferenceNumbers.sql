@@ -1,7 +1,7 @@
 --liquibase formatted sql
 
 --changeset DigitalSales:E06C4CC3-F034-4D55-9FA1-7737FC303348 stripComments:false runOnChange:true splitStatements:false
-CREATE PROCEDURE OrderManagment.sp_InsertOrderItemReferenceNumbers
+CREATE OR ALTER PROCEDURE OrderManagment.sp_InsertOrderItemReferenceNumbers
     @ReferenceNumbers Orders.OrderItemMetadataType READONLY
 AS
 BEGIN
