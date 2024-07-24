@@ -18,6 +18,7 @@ GO
 				:
 	Test Data   : (2,259617,1,'356074104342550,89148000006962297238,015865000895499,89148000008091564397',29)
     NG20240307  : Added Sarah Haver to user list that can use this report
+	NG20240717  : Updated Error Messages to include status <> 0
 ============================================= */
 CREATE OR ALTER PROCEDURE [Report].[P_Report_Update_Carrier_ID]
     (
@@ -95,7 +96,7 @@ BEGIN
                         SELECT loii.*
                         FROM #ListOfIMEIICCID AS loii
                         LEFT JOIN dbo.Phone_Active_Kit AS p ON p.Sim_ID = loii.IMEI_ICCID
-                        WHERE p.ID IS NULL
+                        WHERE p.ID IS NULL AND p.Status <> 0 --NG20240717
                     )
                     RAISERROR (
                         -- noqa: disable=all
@@ -110,7 +111,7 @@ BEGIN
                         SELECT loii.*
                         FROM #ListOfIMEIICCID AS loii
                         JOIN dbo.Phone_Active_Kit AS p ON p.Sim_ID = loii.IMEI_ICCID
-                        WHERE p.Active_Status = 1
+                        WHERE p.Active_Status = 1 AND p.Status <> 0 --NG20240717
                     )
                     RAISERROR (
                         -- noqa: disable=all
@@ -125,7 +126,7 @@ BEGIN
                         SELECT loii.*
                         FROM #ListOfIMEIICCID AS loii
                         JOIN dbo.Phone_Active_Kit AS p ON p.Sim_ID = loii.IMEI_ICCID
-                        WHERE P.Sim_ID = loii.IMEI_ICCID AND p.Status <> 0
+                        WHERE P.Sim_ID = loii.IMEI_ICCID AND p.Status <> 0 --NG20240717
                     )
                     RAISERROR (
                         -- noqa: disable=all
@@ -140,7 +141,7 @@ BEGIN
                         SELECT p.*
                         FROM dbo.Phone_Active_Kit AS p
                         JOIN #ListOfIMEIICCID AS loii ON p.Sim_ID = loii.IMEI_ICCID
-                        WHERE p.Carrier_ID = @Carrier
+                        WHERE p.Carrier_ID = @Carrier AND p.Status <> 0 --NG20240717
                     )
                     RAISERROR (
                         -- noqa: disable=all
