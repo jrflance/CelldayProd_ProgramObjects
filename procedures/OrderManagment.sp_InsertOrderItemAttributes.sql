@@ -1,7 +1,7 @@
 --liquibase formatted sql
 
 --changeset DigitalSales:D376B0F5-D980-4C42-8BE8-60102628E3F5 stripComments:false runOnChange:true splitStatements:false
-CREATE PROCEDURE OrderManagment.sp_InsertOrderItemAttributes
+CREATE OR ALTER PROCEDURE OrderManagment.sp_InsertOrderItemAttributes
     @Attributes Orders.OrderItemMetadataType READONLY
 AS
 BEGIN
