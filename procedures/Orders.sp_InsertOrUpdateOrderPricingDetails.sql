@@ -1,7 +1,7 @@
 --liquibase formatted sql
 
 --changeset DigitalSales:C83DBDFF-06F4-4592-9D07-78E202E54ECA stripComments:false runOnChange:true splitStatements:false
-CREATE PROCEDURE Orders.sp_InsertOrUpdateOrderPricingDetails
+CREATE OR ALTER PROCEDURE Orders.sp_InsertOrUpdateOrderPricingDetails
     @PricingDetails Orders.OrderItemMetadataType READONLY
 AS
 BEGIN
