@@ -98,7 +98,7 @@ BEGIN
             JOIN [dbo].[Users] AS usr ON cus.User_ID = usr.User_ID
             JOIN [Tracfone].[tblTspRootMapping] AS trm ON tar.Account_ID = CAST(trm.TSP_ID AS VARCHAR(20))
 
-            LEFT JOIN tracfone.tblDAPTracMA AS dtm ON dtm.AssignedMAAccountId = dbo.fn_GetTopParentAccountID_NotTcetra_2(acc.Account_ID)
+            LEFT JOIN [Tracfone].[tblDAPTracMA] AS dtm ON dtm.AssignedMAAccountId = dbo.fn_GetTopParentAccountID_NotTcetra_2(acc.Account_ID)
 
             UNION
 
@@ -159,7 +159,7 @@ BEGIN
             JOIN [dbo].[Customers] AS cus ON acc.Customer_ID = cus.Customer_ID
             JOIN [dbo].[Users] AS usr ON cus.User_ID = usr.User_ID
 
-            LEFT JOIN tracfone.tblDAPTracMA AS dtm ON dtm.AssignedMAAccountId = dbo.fn_GetTopParentAccountID_NotTcetra_2(acc.Account_ID)
+            LEFT JOIN [Tracfone].[tblDAPTracMA] AS dtm ON dtm.AssignedMAAccountId = dbo.fn_GetTopParentAccountID_NotTcetra_2(acc.Account_ID)
             LEFT JOIN [Tracfone].[tblTspRootMapping] AS trm ON tar.Account_ID = CAST(trm.TSP_ID AS VARCHAR(20))
 
             WHERE tar.TracfoneTierId = 3
